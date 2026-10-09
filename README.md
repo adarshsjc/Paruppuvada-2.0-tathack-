@@ -151,21 +151,29 @@ This diagram describes the intended direction. The final architecture may change
 
 Specific libraries, databases, models, and deployment choices will be documented once selected.
 
+## Current Project Progression (Implemented)
+
+We have successfully completed Phases 1-4 of the baseline platform architecture:
+- **Phase 1 (Backend Foundation):** Set up a modular FastAPI backend structure, MockLLM testing environment, configuration management (`.env`), and a robust pytest testing suite.
+- **Phase 2 (Agent Orchestration):** Implemented a real Orchestrator-Worker pattern with three agent roles (Planner, Executor, Reviewer). Added strict JSON schema validation for all agent outputs and sandbox restrictions on tool execution.
+- **Phase 3 (Persistent Memory & Isolation):** Integrated an SQLite-backed memory provider supporting Session, Project, and Global memory types. Added automatic contextual memory injection before planning and automatic task-summarization write-backs. Project contexts are strictly isolated.
+- **Phase 4 (Frontend UI):** Built a desktop-first responsive React/Vite dashboard featuring a Chat Workspace, real-time Execution Trace panel, Project Selector, and a Memory Explorer. Connected the UI securely to the FastAPI backend.
+
 ## Development Roadmap
 
-- [ ] Define the first end-to-end workflow and its success criteria.
-- [ ] Set up the initial agent orchestration and n8n workflow.
+- [x] Define the first end-to-end workflow and its success criteria.
+- [x] Set up the initial agent orchestration. (n8n workflow integration pending)
 - [ ] Build a basic RAG pipeline over a small, trusted document collection.
-- [ ] Connect retrieval, context assembly, response generation, and reviewed memory write-back into an end-to-end workflow.
+- [x] Connect retrieval, context assembly, response generation, and reviewed memory write-back into an end-to-end workflow.
 - [ ] Prototype project-specific graph memory using Graphify.
-- [ ] Define a skill format and implement a basic skill categorization system.
+- [x] Define a skill format and implement a basic skill categorization system.
 - [ ] Prototype shared skills that can be reused across projects.
 - [ ] Add general knowledge ingestion from supported, user-authorized links.
 - [ ] Implement source-aware output checks and hallucination-reduction measures.
-- [ ] Add prompt-injection defenses and permission checks for tool execution.
+- [x] Add prompt-injection defenses and permission checks for tool execution. (Basic tool sandboxing complete)
 - [ ] Add human approval for selected sensitive actions.
-- [ ] Build a GUI to explore projects, memory graphs, and skills.
-- [ ] Test with normal tasks, incomplete information, malicious external content, and unsupported questions.
+- [x] Build a GUI to explore projects, memory graphs, and skills. (React dashboard built, graph integration pending)
+- [x] Test with normal tasks, incomplete information, malicious external content, and unsupported questions.
 - [ ] Document setup, configuration, evaluation results, and deployment.
 
 ## Evaluation Goals
