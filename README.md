@@ -153,11 +153,50 @@ Specific libraries, databases, models, and deployment choices will be documented
 
 ## Current Project Progression (Implemented)
 
-We have successfully completed Phases 1-4 of the baseline platform architecture:
+We have successfully completed Phases 1-5 of the baseline platform architecture:
 - **Phase 1 (Backend Foundation):** Set up a modular FastAPI backend structure, MockLLM testing environment, configuration management (`.env`), and a robust pytest testing suite.
 - **Phase 2 (Agent Orchestration):** Implemented a real Orchestrator-Worker pattern with three agent roles (Planner, Executor, Reviewer). Added strict JSON schema validation for all agent outputs and sandbox restrictions on tool execution.
 - **Phase 3 (Persistent Memory & Isolation):** Integrated an SQLite-backed memory provider supporting Session, Project, and Global memory types. Added automatic contextual memory injection before planning and automatic task-summarization write-backs. Project contexts are strictly isolated.
 - **Phase 4 (Frontend UI):** Built a desktop-first responsive React/Vite dashboard featuring a Chat Workspace, real-time Execution Trace panel, Project Selector, and a Memory Explorer. Connected the UI securely to the FastAPI backend.
+- **Phase 5 (Gemini Integration & One-Click Launch):** Integrated Google Gemini (`gemini-3.8-flash`) using the OpenAI-compatible endpoint (`generativelanguage.googleapis.com`). Added automated live verification tests (`backend/live_tests.py`), graceful error/quota reporting, and a one-click launcher script (`start_app.bat`).
+
+## Quickstart & How to Run
+
+### Option 1: One-Click Startup (Windows)
+Double click `start_app.bat` or run:
+```cmd
+start_app.bat
+```
+This automatically boots the FastAPI backend server (`http://127.0.0.1:8000`), launches Vite for the React frontend, and opens `http://localhost:5173` in your default browser.
+
+### Option 2: Manual Startup
+
+#### 1. Backend Setup
+```bash
+cd backend
+# Create and activate virtual environment
+python -m venv venv
+.\venv\Scripts\activate   # On Windows
+# source venv/bin/activate # On Linux/macOS
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure .env (optional if using mock mode)
+cp .env.example .env
+# Edit .env to set GEMINI_API_KEY and USE_MOCK_LLM=False
+
+# Run the API server
+uvicorn app.main:app --reload
+```
+
+#### 2. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Navigate to `http://localhost:5173`.
 
 ## Development Roadmap
 

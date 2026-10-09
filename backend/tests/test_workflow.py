@@ -1,14 +1,18 @@
+import os
+from unittest.mock import patch
 from app.agents.orchestrator import run_workflow
 from app.tools.registry import TOOLS
+from app.config import settings
 
 def test_workflow_mock_execution():
-    state = run_workflow("test request")
-    assert state.task_id is not None
-    assert state.plan is not None
-    assert state.status == "completed"
-    assert "Mock output" in state.plan.steps[0].expected_output
-    assert len(state.execution_steps) > 0
-    assert state.review.approved is True
+    with patch('app.config.settings.use_mock_llm', True):
+        state = run_workflow("test request")
+        assert state.task_id is not None
+        assert state.plan is not None
+        assert state.status == "completed"
+        assert "Mock output" in state.plan.steps[0].expected_output
+        assert len(state.execution_steps) > 0
+        assert state.review.approved is True
 
 def test_calculator_tool():
     result = TOOLS['calculator'](expression="5 + 10 * 2")
