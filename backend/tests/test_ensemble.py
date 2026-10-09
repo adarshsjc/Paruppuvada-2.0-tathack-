@@ -50,6 +50,8 @@ def test_parallel_agents_finish_together_and_selected_answer_is_returned():
         patch("app.agents.ensemble.get_memory_provider", return_value=memory),
         patch("app.agents.ensemble.search_web", return_value=results) as web_search,
         patch("app.agents.ensemble.settings.openrouter_agent_models", "agent-a,agent-b,agent-c"),
+        patch("app.agents.ensemble.settings.agent_count", 3),
+        patch("app.agents.ensemble.settings.ensemble_judge", True),
     ):
         state = run_parallel_workflow("Solve this task")
 
@@ -85,6 +87,8 @@ def test_memory_match_skips_web_search():
         patch("app.agents.ensemble.get_memory_provider", return_value=memory),
         patch("app.agents.ensemble.search_web") as web_search,
         patch("app.agents.ensemble.settings.openrouter_agent_models", "agent-a,agent-b,agent-c"),
+        patch("app.agents.ensemble.settings.agent_count", 3),
+        patch("app.agents.ensemble.settings.ensemble_judge", True),
     ):
         state = run_parallel_workflow("Solve this task")
 

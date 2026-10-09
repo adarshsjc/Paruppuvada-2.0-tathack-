@@ -1,6 +1,7 @@
 export interface Project {
   id: string;
   name: string;
+  deleted?: boolean;
 }
 
 export interface MemoryItem {
@@ -22,4 +23,15 @@ export interface TaskState {
   review?: { approved: boolean; feedback: string };
   status: string;
   iterations: number;
+}
+
+export interface StreamEvent {
+  event: string;
+  message?: string;
+  agent?: number;
+  role?: string;
+  model?: string;
+  solution?: string;
+  error?: string;
+  state?: TaskState;
 }

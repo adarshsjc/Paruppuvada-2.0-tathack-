@@ -104,7 +104,7 @@ def search_web(query: str, max_results: int = 5) -> List[Dict[str, str]]:
                 "AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36"
             )
         },
-        timeout=12,
+        timeout=8,
     )
     response.raise_for_status()
 

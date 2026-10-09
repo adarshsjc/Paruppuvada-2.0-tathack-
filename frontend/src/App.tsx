@@ -14,7 +14,7 @@ function App() {
   const [activeView, setActiveView] = useState('workspace');
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const [apiHealth, setApiHealth] = useState<{ llm_mode: string; agent_count: number } | null>(null);
+  const [apiHealth, setApiHealth] = useState<{ llm_mode: string; llm_model: string; agent_count: number } | null>(null);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -106,7 +106,7 @@ function App() {
           <div className="flex-row">
              <div className={`service-badge ${apiHealth ? 'service-online' : 'service-offline'}`}>
                {apiHealth
-                 ? `API Online · ${apiHealth.llm_mode} · ${apiHealth.agent_count} agents`
+                 ? `API Online · ${apiHealth.llm_mode}${apiHealth.llm_model ? ` · ${apiHealth.llm_model}` : ''} · ${apiHealth.agent_count} agents`
                  : 'API Offline · start the backend'}
              </div>
           </div>

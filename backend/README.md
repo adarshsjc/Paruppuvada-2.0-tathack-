@@ -19,6 +19,32 @@ The agent uses an Orchestrator-Worker pattern to solve tasks iteratively:
 3. Install dependencies: `pip install -r requirements.txt`
 4. Copy `.env.example` to `.env` and configure it (Use `USE_MOCK_LLM=True` for offline testing).
 
+## Choosing an LLM Provider
+The backend supports three LLM modes (`backend/.env`):
+
+| Mode | `USE_MOCK_LLM` | `LLM_PROVIDER` | Requires |
+| --- | --- | --- | --- |
+| Mock (offline tests) | `True` | any | Nothing |
+| **Ollama (local, default)** | `False` | `ollama` | Running Ollama server + pulled model |
+| OpenRouter (cloud free models) | `False` | `openrouter` | OpenRouter API key |
+
+### Local LLM with Ollama (qwen2.5:7b)
+No API key or internet connection is required for inference:
+1. Install [Ollama](https://ollama.com) and start the server.
+2. Pull the default model: `ollama pull qwen2.5:7b`
+3. In `backend/.env` set:
+   ```env
+   USE_MOCK_LLM=False
+   LLM_PROVIDER=ollama
+   OLLAMA_MODEL=qwen2.5:7b
+   ```
+4. Start the API as usual. Verify with `GET /health` → `"llm_mode": "ollama"`.
+
+Each parallel solution agent can run a different local model via
+`OLLAMA_AGENT_MODELS` (comma-separated, up to 3). All 3 agents use
+`qwen2.5:7b` by default.
+
+
 ## Running the API
 Start the server:
 ```bash

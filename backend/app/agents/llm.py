@@ -156,7 +156,94 @@ class OpenAILLM(LLMProvider):
         self.last_model_used = getattr(response, 'model', self.model)
         return response.choices[0].message.content or ""
 
+class OllamaLLM(LLMProvider):
+    """Local LLM provider backed by Ollama's native REST API.
+
+    Keeps all inference on this machine (no API key or cloud calls). The
+    default model is ``qwen2.5:7b``. JSON outputs use Ollama's built-in
+    ``format="json"`` mode with a generous 8192-token context window.
+    """
+
+    def __init__(self):
+        self.base_url = settings.ollama_base_url.rstrip("/")
+        self.model = settings.ollama_model
+        self.provider_name = "ollama"
+        self.last_model_used = self.model
+
+    def _explain(self, reason: str) -> str:
+        return (
+            f"Ollama request to {self.base_url} failed ({reason}). "
+            f"Make sure the server is running (`ollama serve`) and the model is "
+            f"pulled (`ollama pull {self.model}`)."
+        )
+
+    def _chat(self, prompt: str, system: Optional[str] = None, format_json: bool = False, max_tokens: int = 2048) -> str:
+        import requests
+        payload = {
+            "model": self.model,
+            "messages": [],
+            "stream": False,
+            "options": {
+                "num_ctx": settings.ollama_num_ctx,
+                "temperature": 0.2,
+                "num_predict": max_tokens,
+            },
+        }
+        if system:
+            payload["messages"].append({"role": "system", "content": system})
+        payload["messages"].append({"role": "user", "content": prompt})
+        if format_json:
+            payload["format"] = "json"
+
+        try:
+            response = requests.post(f"{self.base_url}/api/chat", json=payload, timeout=180)
+        except requests.RequestException as exc:
+            raise RuntimeError(self._explain(f"connection failed: {exc}")) from exc
+
+        if response.status_code == 404 and "model" in response.text.lower():
+            raise RuntimeError(self._explain("model not found"))
+        if response.status_code == 400 and "context" in response.text.lower():
+            raise RuntimeError(self._explain(f"context window exceeded: {response.text[:200]}"))
+        if response.status_code != 200:
+            raise RuntimeError(self._explain(f"HTTP {response.status_code}: {response.text[:300]}"))
+
+        data = response.json()
+        self.last_model_used = data.get("model", self.model)
+        return data.get("message", {}).get("content", "") or ""
+
+    def generate_json(self, prompt: str, schema: Type[T], model: Optional[str] = None) -> T:
+        if model and model != self.model:
+            self.model = model
+            self.last_model_used = model
+        system_prompt = (
+            "You are a helpful assistant that strictly follows instructions. "
+            f"You MUST return ONLY valid JSON matching this schema, with no conversational filler or markdown before or after:\n"
+            f"{json.dumps(schema.model_json_schema())}"
+        )
+        raw = self._chat(prompt, system=system_prompt, format_json=True)
+        try:
+            return schema.model_validate_json(extract_json_text(raw))
+        except Exception:
+            # Some local models ignore format="json"; retry once without it and
+            # fall back to robust JSON extraction.
+            raw = self._chat(prompt, system=system_prompt, format_json=False)
+            try:
+                return schema.model_validate_json(extract_json_text(raw))
+            except Exception as exc:
+                raise ValueError(
+                    f"Ollama model {self.last_model_used} produced invalid JSON "
+                    f"matching schema {schema.__name__}: {exc}. Raw: {raw[:300]}"
+                ) from exc
+
+    def generate_text(self, prompt: str, model: Optional[str] = None) -> str:
+        if model and model != self.model:
+            self.model = model
+            self.last_model_used = model
+        return self._chat(prompt, max_tokens=1000)
+
 def get_llm() -> LLMProvider:
     if settings.use_mock_llm:
         return MockLLM()
+    if settings.llm_provider.lower() == "ollama":
+        return OllamaLLM()
     return OpenAILLM()

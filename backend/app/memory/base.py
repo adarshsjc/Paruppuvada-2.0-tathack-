@@ -15,13 +15,26 @@ class MemoryItem(BaseModel):
 class Project(BaseModel):
     id: str
     name: str
+    deleted: bool = False
 
 class MemoryProvider(ABC):
     @abstractmethod
     def create_project(self, name: str) -> Project: pass
     
     @abstractmethod
-    def list_projects(self) -> List[Project]: pass
+    def list_projects(self, include_deleted: bool = False) -> List[Project]: pass
+    
+    @abstractmethod
+    def get_project(self, project_id: str) -> Optional[Project]: pass
+    
+    @abstractmethod
+    def delete_project(self, project_id: str) -> bool: pass
+    
+    @abstractmethod
+    def restore_project(self, project_id: str) -> bool: pass
+    
+    @abstractmethod
+    def purge_project(self, project_id: str) -> bool: pass
     
     @abstractmethod
     def add_memory(self, item: MemoryItem) -> MemoryItem: pass

@@ -159,6 +159,7 @@ We have successfully completed Phases 1-5 of the baseline platform architecture:
 - **Phase 3 (Persistent Memory & Isolation):** Integrated an SQLite-backed memory provider supporting Session, Project, and Global memory types. Added automatic contextual memory injection before planning and automatic task-summarization write-backs. Project contexts are strictly isolated.
 - **Phase 4 (Frontend UI):** Built a desktop-first responsive React/Vite dashboard featuring a Chat Workspace, real-time Execution Trace panel, Project Selector, and a Memory Explorer. Connected the UI securely to the FastAPI backend.
 - **Phase 5 (OpenRouter Free Models Integration & One-Click Launch):** Integrated OpenRouter's Free Models Router (`openrouter/free` via `https://openrouter.ai/api/v1`) using the OpenAI-compatible SDK. Added dynamic model ID detection, resilient JSON schema extraction with retry protection against non-instruct/moderation models, automated live verification tests (`backend/live_tests.py`), and a one-click launcher script (`start_app.bat`).
+- **Phase 6 (Fully Local Ollama Integration):** Added a native Ollama provider using the local REST API at `http://127.0.0.1:11434` with the default model `qwen2.5:7b`. Inference runs entirely on this machine with no API key or cloud calls, using Ollama's JSON mode (`format=json`) with an 8192-token context window. Switch providers via `LLM_PROVIDER=ollama` / `LLM_PROVIDER=openrouter` in `backend/.env`; optional per-agent model lists via `OLLAMA_AGENT_MODELS`.
 
 ## Quickstart & How to Run
 
@@ -169,7 +170,31 @@ Double-click `start_app.bat` or run:
 ```
 This creates the backend virtual environment if needed, installs backend and frontend dependencies, waits for both servers to respond, and opens `http://127.0.0.1:5173` in your default browser. It starts in offline mock mode if no `backend/.env` is configured.
 
-Tasks are solved independently by three concurrent agents with distinct roles: Direct Solver, Critical Thinker, and Research Synthesizer. With `USE_MOCK_LLM=False` and an OpenRouter API key in `backend/.env`, the agents use free models via `openrouter/free`; a fourth model call judges the candidates, and the selected answer is returned in chat. Configure `OPENROUTER_AGENT_MODELS` to choose specific free/open-weight model IDs. The execution trace displays each role, candidate, and selected answer. Mock mode produces clearly labelled role-specific simulated candidates.
+### Local LLM with Ollama (recommended for private, offline inference)
+Install [Ollama](https://ollama.com), start the server, and pull the default model:
+```cmd
+ollama pull qwen2.5:7b
+```
+Then `backend/.env` is already configured as:
+```env
+USE_MOCK_LLM=False
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=qwen2.5:7b
+```
+All inference runs locally — no API key or internet required. The app reports `API Online · ollama · 3 agents` when connected.
+
+### Cloud free models with OpenRouter
+Set `LLM_PROVIDER=openrouter` and add `OPENROUTER_API_KEY=...` to `backend/.env`.
+
+### Streaming progress & speed tuning
+The chat UI streams live progress (web search, each agent "thinking"/"finished", judge,
+selected answer) via Server-Sent Events so you never stare at a frozen spinner.
+On machines where Ollama serializes concurrent requests (limited VRAM, e.g. a 7B model offloaded
+partly to CPU), running parallel agents makes things *slower*. Set `AGENT_COUNT=1` and
+`ENSEMBLE_JUDGE=False` in `backend/.env` for the fastest path (one model call per task);
+raise them to `3` / `True` on capable GPUs for the multi-candidate ensemble.
+
+Tasks are solved independently by three concurrent agents with distinct roles: Direct Solver, Critical Thinker, and Research Synthesizer. With `USE_MOCK_LLM=False` and a configured provider in `backend/.env`, the agents run against your chosen LLM provider (Qwen 2.5 7B locally via Ollama, or free models via `openrouter/free`); with `ENSEMBLE_JUDGE=True` a further model call judges the candidates, and the selected answer is returned in chat. Configure `OPENROUTER_AGENT_MODELS` / `OLLAMA_AGENT_MODELS` to choose specific model IDs per agent. The execution trace displays each role, candidate, and selected answer. Mock mode produces clearly labelled role-specific simulated candidates.
 
 When SQLite returns no matching memory, the backend automatically searches Bing's public web results and supplies titles, excerpts, and URLs to each solution agent. Agents are instructed to cite supplied source URLs; the execution trace displays the retrieved sources. Search is controlled by `WEB_SEARCH_ENABLED` and `WEB_SEARCH_MAX_RESULTS`. Because the task text is used as a public search query in this fallback, avoid submitting sensitive information.
 

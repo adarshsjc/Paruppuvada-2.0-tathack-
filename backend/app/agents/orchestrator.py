@@ -62,12 +62,11 @@ def run_workflow(request: str, project_id: str = None) -> TaskState:
                 if review.approved:
                     state.status = "completed"
                     
-                    # Auto write-back summary, filtering secrets
-                    summary_prompt = f"Summarize the final result of this task for future reference. Do NOT include any API keys or secrets: {state.final_result}"
-                    summary = llm.generate_text(summary_prompt)
-                    if "[MOCK]" in summary or "secret" not in summary.lower():
+                    # Auto write-back without an extra inference call (faster).
+                    writeback = str(state.final_result)[:800].strip()
+                    if writeback and "secret" not in writeback.lower():
                         provider.add_memory(MemoryItem(
-                            project_id=project_id, type="session", content=summary, source="task_writeback", tags=["auto_summary"]
+                            project_id=project_id, type="session", content=writeback, source="task_writeback", tags=["auto_summary"]
                         ))
                     return state
                 else:
