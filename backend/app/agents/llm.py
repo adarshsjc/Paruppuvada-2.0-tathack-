@@ -39,46 +39,111 @@ class MockLLM(LLMProvider):
     def generate_text(self, prompt: str) -> str:
         return f"[MOCK] Processed: {prompt}"
 
+def extract_json_text(content: str) -> str:
+    """Extract clean JSON text from LLM response, handling markdown fences and extraneous text."""
+    if not content:
+        return ""
+    text = content.strip()
+    # Check for markdown code fences
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    # Locate first '{' and last '}'
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end >= start:
+        return text[start:end+1]
+    return text
+
 class OpenAILLM(LLMProvider):
     def __init__(self):
         try:
             from openai import OpenAI
-            if not settings.gemini_api_key or settings.gemini_api_key == "PASTE_YOUR_KEY_HERE":
-                raise ValueError("GEMINI_API_KEY is not set or is still the placeholder.")
-            
-            # Using the Gemini OpenAI-compatible endpoint
-            self.client = OpenAI(
-                api_key=settings.gemini_api_key,
-                base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-            )
+            self.last_model_used = None
+            if settings.openrouter_api_key and settings.openrouter_api_key != "PASTE_YOUR_API_KEY_HERE":
+                self.client = OpenAI(
+                    api_key=settings.openrouter_api_key,
+                    base_url=settings.openrouter_base_url,
+                    default_headers={
+                        "HTTP-Referer": "http://localhost:5173",
+                        "X-Title": "Autonomous AI Agent Platform",
+                    }
+                )
+                self.model = settings.openrouter_model
+                self.provider_name = "openrouter"
+            elif settings.gemini_api_key and settings.gemini_api_key != "PASTE_YOUR_KEY_HERE":
+                self.client = OpenAI(
+                    api_key=settings.gemini_api_key,
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+                )
+                self.model = settings.gemini_model
+                self.provider_name = "gemini"
+            else:
+                raise ValueError("OPENROUTER_API_KEY is not configured or is still the placeholder.")
         except ImportError:
             raise RuntimeError("openai package is not installed.")
 
     def generate_json(self, prompt: str, schema: Type[T]) -> T:
-        system_prompt = f"You are a helpful assistant. Return ONLY valid JSON that matches this JSON schema:\n{json.dumps(schema.model_json_schema())}"
+        system_prompt = (
+            "You are a helpful assistant that strictly follows instructions. "
+            f"You MUST return ONLY valid JSON matching this schema, with no conversational filler or markdown before or after:\n"
+            f"{json.dumps(schema.model_json_schema())}"
+        )
         
-        try:
-            response = self.client.chat.completions.create(
-                model=settings.gemini_model,
-                response_format={"type": "json_object"},
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=2000
-            )
-            return schema.model_validate_json(response.choices[0].message.content)
-        except Exception as e:
-            raw_response = response.choices[0].message.content if 'response' in locals() else 'None'
-            raise ValueError(f"LLM produced invalid JSON or API call failed: {e}\nRaw output: {raw_response}")
+        last_err = None
+        # Retry up to 3 times in case openrouter/free routes to an incompatible/moderation model
+        for attempt in range(3):
+            try:
+                # Attempt with response_format={"type": "json_object"} first
+                try:
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        response_format={"type": "json_object"},
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": prompt}
+                        ],
+                        max_tokens=2000
+                    )
+                except Exception as api_err:
+                    # Some free models on OpenRouter do not support response_format parameter
+                    if "response_format" in str(api_err).lower() or "400" in str(api_err):
+                        response = self.client.chat.completions.create(
+                            model=self.model,
+                            messages=[
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": prompt}
+                            ],
+                            max_tokens=2000
+                        )
+                    else:
+                        raise api_err
+
+                # Record actual model ID selected by OpenRouter (e.g. meta-llama/llama-3.3-70b-instruct:free)
+                self.last_model_used = getattr(response, 'model', self.model)
+                raw_content = response.choices[0].message.content or ""
+                
+                clean_json = extract_json_text(raw_content)
+                return schema.model_validate_json(clean_json)
+            except Exception as e:
+                last_err = e
+                # If using openrouter/free, a retry may pick a different free model
+                continue
+                
+        raise ValueError(f"LLM (model: {self.last_model_used}) produced invalid JSON matching schema: {last_err}")
             
     def generate_text(self, prompt: str) -> str:
         response = self.client.chat.completions.create(
-            model=settings.gemini_model,
+            model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1000
         )
-        return response.choices[0].message.content
+        self.last_model_used = getattr(response, 'model', self.model)
+        return response.choices[0].message.content or ""
 
 def get_llm() -> LLMProvider:
     if settings.use_mock_llm:

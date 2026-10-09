@@ -35,6 +35,12 @@ TOOLS = {
 def execute_tool(name: str, args: dict, project_id: str = None) -> str:
     if name not in TOOLS: return f"Error: Tool '{name}' not found."
     try:
+        if name == "calculator":
+            if "expression" not in args:
+                for alt_key in ["calculation", "expr", "input", "query", "equation", "math"]:
+                    if alt_key in args:
+                        args = {"expression": args[alt_key]}
+                        break
         if name in ["save_memory", "search_memory"]:
             args['project_id'] = project_id
         return TOOLS[name](**args)

@@ -7,6 +7,12 @@ from app.memory.base import MemoryItem
 
 MAX_ITERATIONS = 5
 
+TOOL_DESCRIPTIONS = (
+    "- calculator(expression: str): Evaluates a math expression. Example tool_input: {\"expression\": \"347 * 829\"}\n"
+    "- save_memory(content: str, is_global: bool = False, tags: list = []): Saves note to memory.\n"
+    "- search_memory(query: str): Searches memory for context."
+)
+
 def run_workflow(request: str, project_id: str = None) -> TaskState:
     llm = get_llm()
     provider = get_memory_provider()
@@ -29,11 +35,11 @@ def run_workflow(request: str, project_id: str = None) -> TaskState:
         state.iterations += 1
         
         exec_context = (
-            f"Request: {request}\n"
+            f"Original User Request: {request}\n"
             f"Plan: {state.plan.model_dump_json() if state.plan else ''}\n"
             f"Past Execution Steps: {state.execution_steps}\n"
-            f"Available Tools: {list(TOOLS.keys())}\n"
-            "If finished, set tool='none' and provide final_answer."
+            f"Available Tools:\n{TOOL_DESCRIPTIONS}\n"
+            "INSTRUCTION: Choose the next action. If you have completed the plan or have the final answer, set tool='none' and supply final_answer. Otherwise, call a tool with valid tool_input."
         )
         
         try:
