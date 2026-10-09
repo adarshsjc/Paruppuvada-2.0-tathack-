@@ -165,7 +165,7 @@ p {
 .badge-orange { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
 .badge-red { background: rgba(239, 68, 68, 0.2); color: #f87171; }
 
-.mock-badge {
+.service-badge {
   background: rgba(239, 68, 68, 0.1);
   color: #f87171;
   padding: 4px 12px;
@@ -175,6 +175,11 @@ p {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+.service-online {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
 .flex-row { display: flex; align-items: center; gap: 12px; }

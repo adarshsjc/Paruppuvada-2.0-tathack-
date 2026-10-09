@@ -5,13 +5,13 @@
 ## 1. Project Overview
 This project is an **Autonomous AI Agent platform** built for a hackathon. The goal is to provide a maintainable, working baseline for a multi-agent system that executes tasks end-to-end. It features persistent memory, project-based knowledge isolation, reusable skills (tools), and built-in security checks.
 
-Currently, it acts as a baseline that can plan, execute, and review tasks using a single LLM interface, while saving contextual data to a local SQLite database.
+Tasks are solved by three concurrent solution agents. A judge selects the answer that best matches the request, and the UI shows all candidates and the selected response. The project also retains the original planner/executor/reviewer workflow for CLI use. Context and selected answers are saved to a local SQLite database.
 
 ## 2. Technologies Used
 - **Backend:** Python (3.11+), FastAPI, Uvicorn, Pydantic v2, Pytest, standard `sqlite3` library.
 - **LLM Integration:** OpenRouter Free Models Router (`openrouter/free`) accessed via the `openai` Python SDK with OpenRouter's OpenAI-compatible endpoint (`https://openrouter.ai/api/v1`), alongside a built-in zero-cost `MockLLM` mode.
 - **Frontend:** React, TypeScript, Vite, Vanilla CSS (modular design system with dark mode & glassmorphism), `lucide-react` for icons.
-- **Orchestration & Tooling:** Custom state machine (Planner -> Executor -> Reviewer), restricted Python tool sandbox (safe math calculator, SQLite memory tools), one-click launcher (`start_app.bat`).
+- **Orchestration & Tooling:** Concurrent solution agents with a judge, plus a custom planner/executor/reviewer state machine (Planner -> Executor -> Reviewer), restricted Python tool sandbox (safe math calculator, SQLite memory tools), one-click dependency-bootstrapping launcher (`start_app.bat`).
 
 ## 3. Architecture & Decisions Made
 - **Monorepo Structure:** The codebase is split strictly into `backend/` and `frontend/` to keep concerns decoupled.
@@ -20,6 +20,7 @@ Currently, it acts as a baseline that can plan, execute, and review tasks using 
   1. **Planner:** Outputs a step-by-step JSON plan.
   2. **Executor:** Uses ReAct-style loops (up to a 5-iteration limit) to pick tools (e.g., `calculator`, `save_memory`).
   3. **Reviewer:** Validates the Executor's final answer against the original request.
+- **Parallel Solutions:** The task API submits three independent solution prompts concurrently, records individual failures without discarding successful candidates, then asks a judge model to select the best successful answer. OpenRouter can route each agent to a free model; `OPENROUTER_AGENT_MODELS` can override the three model routes.
 - **Strict JSON Outputs:** Agents are forced to output structured data matching Pydantic schemas using `response_format={"type": "json_object"}` and resilient markdown fence parsing.
 - **Mock LLM Mode:** Configured via `.env` (`USE_MOCK_LLM=True`). This allows offline UI/UX development and fast test execution without spending real API credits.
 - **Tool Sandbox:** Tools are explicitly defined Python functions. We purposefully avoid unrestricted Python `exec()` or Shell execution for security. For example, the `calculator` tool uses a strict whitelist of math characters.
@@ -30,13 +31,20 @@ Currently, it acts as a baseline that can plan, execute, and review tasks using 
 2. **Phase 2 (Orchestration):** The Planner -> Executor -> Reviewer loop, tool registry, and CLI tracing.
 3. **Phase 3 (Memory & Isolation):** SQLite database creation. Memories are tagged as `global`, `project`, or `session`. Tasks can be submitted with a `project_id`. The Orchestrator automatically searches memory for context before planning and auto-summarizes the result back to memory upon completion.
 4. **Phase 4 (Frontend UI):** A React/Vite dashboard featuring a Chat Workspace, an Execution Trace panel (showing agent thoughts and tools in real-time), a Project Selector, and a Memory Explorer.
-5. **Phase 5 (OpenRouter Free Models Integration & One-Click Launch):** 
+5. **Phase 5 (OpenRouter Free Models Integration & One-Click Launch):**
    - Integrated OpenRouter's Free Models Router (`openrouter/free`) via `https://openrouter.ai/api/v1` using OpenAI SDK.
    - Dynamic model ID detection (`response.model`) capturing the exact underlying model selected per request (e.g. `meta-llama/llama-3.3-70b-instruct:free`, `cohere/north-mini-code:free`, `poolside/laguna-xs-2.1:free`).
    - Resilient JSON schema extraction with retry protection against non-instruct or moderation models.
    - Enhanced tool argument normalization in `registry.py` and clear parameter documentation in orchestrator prompts.
    - Built a live test verification suite (`backend/live_tests.py`) covering direct LLM connection, structured planning, tool execution verification, reviewer approval, and SQLite persistence.
    - Created `start_app.bat` for one-click startup of both backend and frontend servers with automatic browser launch.
+6. **Phase 6 (Parallel Agent Ensemble & Startup Recovery):**
+   - Added three concurrent answer agents and a judge to select the best candidate for API tasks; all candidates are visible in the execution trace.
+   - Updated the Windows launcher to bootstrap Python and Node dependencies and wait for both services to become reachable before opening the site.
+   - Added a live API-health badge and made mock mode the default for a working offline first launch.
+7. **Phase 7 (Memory-Gated Web Research):**
+   - When memory search has no matching entries, query Bing's public search results and provide titles, snippets, and URLs as untrusted reference context to the parallel agents.
+   - Display retrieved source links and explicit search errors in the execution trace; web search can be disabled or capped using backend settings.
 
 ## 5. What Went Wrong During Implementation (Gotchas & Fixes)
 When an AI works on this project in the future, watch out for these known issues that we already solved:
@@ -97,7 +105,9 @@ When an AI works on this project in the future, watch out for these known issues
   3. Open `http://localhost:5173` in your browser.
 
 ## 7. UI/UX & Frontend Design System
-A comprehensive design system, component hierarchy, color tokens, and interface overhaul blueprint is documented in [design.md](file:///d:/project/Thtava%20final/design.md).
+A comprehensive design system, component hierarchy, color tokens, and interface overhaul blueprint is documented in [design.md](./design.md).
+
+For live free-model answers, set `USE_MOCK_LLM=False` and `OPENROUTER_API_KEY` in `backend/.env`. Without that configuration, the app starts in mock mode so the site remains available offline.
 
 ## 8. Future Roadmap (Not Yet Implemented)
 - **Vector RAG:** Swapping/extending SQLite with Chroma/Qdrant for semantic search over ingested documents.

@@ -167,7 +167,11 @@ Double-click `start_app.bat` or run:
 ```cmd
 .\start_app.bat
 ```
-This automatically boots the FastAPI backend server (`http://127.0.0.1:8000`), launches Vite for the React frontend, and opens `http://localhost:5173` in your default browser.
+This creates the backend virtual environment if needed, installs backend and frontend dependencies, waits for both servers to respond, and opens `http://127.0.0.1:5173` in your default browser. It starts in offline mock mode if no `backend/.env` is configured.
+
+Tasks are solved independently by three concurrent agents with distinct roles: Direct Solver, Critical Thinker, and Research Synthesizer. With `USE_MOCK_LLM=False` and an OpenRouter API key in `backend/.env`, the agents use free models via `openrouter/free`; a fourth model call judges the candidates, and the selected answer is returned in chat. Configure `OPENROUTER_AGENT_MODELS` to choose specific free/open-weight model IDs. The execution trace displays each role, candidate, and selected answer. Mock mode produces clearly labelled role-specific simulated candidates.
+
+When SQLite returns no matching memory, the backend automatically searches Bing's public web results and supplies titles, excerpts, and URLs to each solution agent. Agents are instructed to cite supplied source URLs; the execution trace displays the retrieved sources. Search is controlled by `WEB_SEARCH_ENABLED` and `WEB_SEARCH_MAX_RESULTS`. Because the task text is used as a public search query in this fallback, avoid submitting sensitive information.
 
 ### Option 2: Windows PowerShell Commands
 

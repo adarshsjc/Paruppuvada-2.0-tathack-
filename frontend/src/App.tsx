@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Bot, FolderKanban, Database, Settings as SettingsIcon, History } from 'lucide-react';
 import './App.css';
 import type { Project } from './types';
-import { fetchProjects } from './api';
+import { fetchHealth, fetchProjects } from './api';
 
 import ChatWorkspace from './views/ChatWorkspace';
 import ProjectSelector from './views/ProjectSelector';
@@ -14,22 +14,42 @@ function App() {
   const [activeView, setActiveView] = useState('workspace');
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [apiHealth, setApiHealth] = useState<{ llm_mode: string; agent_count: number } | null>(null);
 
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       const projs = await fetchProjects();
       setProjects(projs);
-      if (projs.length > 0 && !selectedProjectId) {
-        setSelectedProjectId(projs[0].id);
-      }
+      setSelectedProjectId(current => projs.length > 0 && !current ? projs[0].id : current);
     } catch (e) {
       console.error('Failed to load projects', e);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchProjects().then(projs => {
+      if (!mounted) return;
+      setProjects(projs);
+      setSelectedProjectId(current => projs.length > 0 && !current ? projs[0].id : current);
+    }).catch(e => {
+      console.error('Failed to load projects', e);
+    });
+    const checkHealth = async () => {
+      try {
+        const health = await fetchHealth();
+        if (mounted) setApiHealth(health);
+      } catch {
+        if (mounted) setApiHealth(null);
+      }
+    };
+    checkHealth();
+    const interval = window.setInterval(checkHealth, 10000);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, [loadProjects]);
 
   const selectedProjectName = projects.find(p => p.id === selectedProjectId)?.name || 'Global Mode';
 
@@ -84,7 +104,11 @@ function App() {
             <span className="badge badge-blue">{selectedProjectName}</span>
           </div>
           <div className="flex-row">
-             <div className="mock-badge">API Online</div>
+             <div className={`service-badge ${apiHealth ? 'service-online' : 'service-offline'}`}>
+               {apiHealth
+                 ? `API Online · ${apiHealth.llm_mode} · ${apiHealth.agent_count} agents`
+                 : 'API Offline · start the backend'}
+             </div>
           </div>
         </div>
         <div className="view-container">

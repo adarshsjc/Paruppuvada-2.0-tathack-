@@ -1,6 +1,13 @@
 import type { Project, MemoryItem, TaskState } from './types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
+const API_ROOT = API_BASE.replace(/\/api\/v1\/?$/, '');
+
+export async function fetchHealth(): Promise<{ status: string; llm_mode: string; agent_count: number }> {
+  const res = await fetch(`${API_ROOT}/health`);
+  if (!res.ok) throw new Error('Backend health check failed');
+  return res.json();
+}
 
 export async function fetchProjects(): Promise<Project[]> {
   const res = await fetch(`${API_BASE}/projects`);

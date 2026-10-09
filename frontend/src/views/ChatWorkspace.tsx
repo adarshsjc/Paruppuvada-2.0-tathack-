@@ -32,6 +32,18 @@ export default function ChatWorkspace({ projectId }: { projectId: string }) {
   };
 
   const latestState = messages.filter(m => m.state).pop()?.state;
+  const agentCandidates = latestState?.execution_steps.flatMap(step =>
+    Array.isArray(step.parallel_agents) ? step.parallel_agents : []
+  ) ?? [];
+  const webResults = latestState?.execution_steps.flatMap(step =>
+    Array.isArray(step.web_research) ? step.web_research : []
+  ) ?? [];
+  const webSearchErrors = latestState?.execution_steps
+    .map(step => step.web_search_error)
+    .filter((message): message is string => typeof message === 'string') ?? [];
+  const actionSteps = latestState?.execution_steps.filter(step =>
+    step.action || step.tool_result || step.review || step.error
+  ) ?? [];
 
   return (
     <div className="workspace-grid">
@@ -103,10 +115,52 @@ export default function ChatWorkspace({ projectId }: { projectId: string }) {
               </div>
             )}
             
-            {latestState.execution_steps.length > 0 && (
+            {agentCandidates.length > 0 && (
               <div>
-                <h3>Agent Steps</h3>
-                {latestState.execution_steps.map((step, idx) => (
+                <h3>Parallel Agent Solutions</h3>
+                {agentCandidates.map((candidate, idx) => (
+                  <div key={idx} className="task-step" style={{ borderLeft: `3px solid ${candidate.selected ? 'var(--success)' : 'var(--accent)'}` }}>
+                    <div className="flex-row" style={{ justifyContent: 'space-between' }}>
+                      <strong>
+                        Agent {candidate.agent} · {candidate.role || 'Solution Agent'} · {candidate.model}
+                      </strong>
+                      {candidate.selected && <span className="badge badge-green">Selected</span>}
+                    </div>
+                    <div style={{ whiteSpace: 'pre-wrap', marginTop: '8px' }}>
+                      {candidate.solution || `Agent failed: ${candidate.error}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {webResults.length > 0 && (
+              <div>
+                <h3>Web Research Sources</h3>
+                {webResults.map((result, idx) => (
+                  <div key={idx} className="task-step">
+                    <a href={result.url} target="_blank" rel="noopener noreferrer">
+                      {result.title}
+                    </a>
+                    {result.snippet && (
+                      <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        {result.snippet}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {webSearchErrors.map((message, idx) => (
+              <div key={idx} className="task-step" style={{ color: 'var(--warning)' }}>
+                {message}
+              </div>
+            ))}
+
+            {actionSteps.length > 0 && (
+              <div>
+                <h3>Execution Steps</h3>
+                {actionSteps.map((step, idx) => (
                   <div key={idx} className="task-step" style={{ borderLeft: '3px solid var(--accent)' }}>
                     {step.action && (
                       <>
