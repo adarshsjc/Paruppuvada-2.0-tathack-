@@ -64,9 +64,18 @@ class OpenAILLM(LLMProvider):
         try:
             from openai import OpenAI
             self.last_model_used = None
-            if settings.openrouter_api_key and settings.openrouter_api_key != "PASTE_YOUR_API_KEY_HERE":
+            # Priority 1: Gemini direct API (fastest, ~600-900ms per step)
+            if settings.gemini_api_key and settings.gemini_api_key.strip() not in ("", "PASTE_YOUR_KEY_HERE"):
                 self.client = OpenAI(
-                    api_key=settings.openrouter_api_key,
+                    api_key=settings.gemini_api_key.strip(),
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+                )
+                self.model = settings.gemini_model
+                self.provider_name = "gemini"
+            # Priority 2: OpenRouter free models (slower, 5-12s per step)
+            elif settings.openrouter_api_key and settings.openrouter_api_key.strip() not in ("", "PASTE_YOUR_API_KEY_HERE"):
+                self.client = OpenAI(
+                    api_key=settings.openrouter_api_key.strip(),
                     base_url=settings.openrouter_base_url,
                     default_headers={
                         "HTTP-Referer": "http://localhost:5173",
@@ -75,17 +84,11 @@ class OpenAILLM(LLMProvider):
                 )
                 self.model = settings.openrouter_model
                 self.provider_name = "openrouter"
-            elif settings.gemini_api_key and settings.gemini_api_key != "PASTE_YOUR_KEY_HERE":
-                self.client = OpenAI(
-                    api_key=settings.gemini_api_key,
-                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-                )
-                self.model = settings.gemini_model
-                self.provider_name = "gemini"
             else:
-                raise ValueError("OPENROUTER_API_KEY is not configured or is still the placeholder.")
+                raise ValueError("No API key configured. Set GEMINI_API_KEY or OPENROUTER_API_KEY in backend/.env")
         except ImportError:
             raise RuntimeError("openai package is not installed.")
+
 
     def generate_json(self, prompt: str, schema: Type[T]) -> T:
         system_prompt = (

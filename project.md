@@ -69,6 +69,17 @@ When an AI works on this project in the future, watch out for these known issues
    - *The Issue:* The initial repository `.gitignore` omitted `.env`, which could accidentally lead to leaking API keys.
    - *The Fix:* Updated root `.gitignore` to explicitly ignore `.env`, `*.env`, and `backend/.env`.
 
+8. **Multi-Agent Latency & Free Router Performance**
+   - *The Issue:* Tasks submitted to the agent can take 20–45 seconds before the final result is displayed in the UI. 
+   - *Why It Happens:* The orchestration is a multi-step sequential state machine (Planner -> Executor [Step 1] -> Tool Execution -> Executor [Step 2] -> Reviewer -> Memory Auto-Summary). Each task makes 4 to 5 separate LLM API roundtrips. When using the generic `openrouter/free` router, free-tier upstream providers often have cold-start queueing (5–12s per roundtrip).
+   - *How to Speed It Up:*
+     1. **Target Specific Fast Free Models in `.env`:** Instead of the generic `openrouter/free` router (which adds routing delay), specify high-throughput free models directly:
+        - `OPENROUTER_MODEL=meta-llama/llama-3.3-70b-instruct:free`
+        - `OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free`
+        - `OPENROUTER_MODEL=mistralai/mistral-7b-instruct:free`
+     2. **Use Direct Gemini Provider:** Setting `USE_MOCK_LLM=False` with `GEMINI_API_KEY` and `GEMINI_MODEL=gemini-3.8-flash` processes each agent step in ~600–900ms.
+     3. **Frontend Multi-Stage Progress Stepper:** Described in [design.md](file:///d:/project/Thtava%20final/design.md), visual stage transitions (Planning ⏳ -> Executing ⚙️ -> Reviewing 🔍 -> Done ✅) provide immediate visual feedback.
+
 ## 6. How to Run the Platform
 - **Option A (One-Click Windows):** Double-click or run `start_app.bat`.
 - **Option B (PowerShell Commands):**
@@ -85,8 +96,12 @@ When an AI works on this project in the future, watch out for these known issues
      ```
   3. Open `http://localhost:5173` in your browser.
 
-## 7. Future Roadmap (Not Yet Implemented)
+## 7. UI/UX & Frontend Design System
+A comprehensive design system, component hierarchy, color tokens, and interface overhaul blueprint is documented in [design.md](file:///d:/project/Thtava%20final/design.md).
+
+## 8. Future Roadmap (Not Yet Implemented)
 - **Vector RAG:** Swapping/extending SQLite with Chroma/Qdrant for semantic search over ingested documents.
 - **Graph Memory:** Integrating Neo4j or Graphify to store entities, relationships, and concepts across projects.
 - **n8n Webhooks:** Allowing the Executor to call n8n webhooks as "tools", and allowing n8n to trigger the FastAPI endpoints.
 - **Human-in-the-Loop:** Pausing the execution loop in the backend to wait for a human approval via the React UI before executing sensitive tools.
+- **Streaming Execution Traces (SSE / WebSockets):** Streaming each agent state step in real-time to the frontend UI as it occurs.
