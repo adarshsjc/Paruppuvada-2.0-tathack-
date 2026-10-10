@@ -1,0 +1,16 @@
+{
+  "source": "sales.csv",
+  "group_by": "product",
+  "sum_column": "revenue",
+  "totals": {
+    "Widget A": {
+      "revenue": 1590.75
+    },
+    "Widget B": {
+      "revenue": 1275.6
+    },
+    "Gadget C": {
+      "revenue": 2799.99
+    }
+  }
+}

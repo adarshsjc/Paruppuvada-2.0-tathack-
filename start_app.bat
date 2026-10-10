@@ -1,7 +1,7 @@
 @echo off
-title Autonomous AI Agent Platform
+title Open Chat - Stratify AI Platform
 echo ===================================================
-echo Starting Autonomous AI Agent Platform...
+echo Starting Open Chat - Stratify AI Platform...
 echo ===================================================
 
 echo.

@@ -1,8 +1,9 @@
 # Autonomous AI Agent Platform - Interface Design System & UX Blueprint (`design.md`)
 
-> **Version:** 2.0  
+> **Version:** 2.1  
 > **Target:** Frontend UI/UX Overhaul & Modernization  
 > **Tech Stack:** React 19, TypeScript, Vite, Modern Vanilla CSS (Tokens, Grid, Glassmorphism, CSS Variables)
+> **Distribution:** Codebase is optimized and chunked for LLM ingestion via `parts/` architecture.
 
 ---
 
@@ -15,6 +16,7 @@ The Autonomous AI Agent interface should feel like a **Mission Control Cyber-Dec
 2. **Obsidian Glassmorphism:** Deep dark canvas (`#090d16` / `#0f172a`), translucent glass panels with `backdrop-filter: blur(16px)`, radial ambient glow accents, and subtle borders (`rgba(255, 255, 255, 0.08)`).
 3. **Structured Visual Hierarchy:** Clear separation between **Chat / Mission Input** (left) and **Real-Time Execution Trace DAG / Inspector** (right), with collapsible sidebars and context headers.
 4. **Zero-Dependency Modern CSS:** High-performance, native CSS variables and animations without heavy CSS frameworks, ensuring instant load times and pixel-perfect responsiveness.
+5. **Interactive 3D Data Visualization:** Real-time 3D Force-Directed Graphs mapping agent memories, skills, and execution traces with dynamic illumination.
 
 ---
 
@@ -101,6 +103,7 @@ Below is the design token blueprint to be defined in `frontend/src/index.css`:
 | 💬 Workspace  | +-----------------------------------+ +--------------------------------+ |
 | 📁 Projects   | | 🤖 MISSION CONTROL (Chat)         | | ⚡ EXECUTION TRACE & DAG       | |
 | 🧠 Memory     | |-----------------------------------| |--------------------------------| |
+| 🌐 Mem Mgmt   | | [User Msg]: Calculate 347 * 829   | | [● PLANNER] Step 1 of 1        | |
 | 📜 History    | | [User Msg]: Calculate 347 * 829   | | [● PLANNER] Step 1 of 1        | |
 | ⚙️ Settings   | |                                   | | ├─ Goal: Compute product       | |
 |               | | [Agent]: [ ⏳ Processing... ]     | | └─ Expected: 287663            | |
@@ -155,13 +158,13 @@ Below is the design token blueprint to be defined in `frontend/src/index.css`:
 - **"Add Knowledge" Modal:** Floating glass modal to create new persistent memories without running a chat task.
 
 ### 4.5. Latency & Model Settings Hub (`Settings.tsx`)
-- **Interactive Model Selector:** Quick-switch between:
-  1. `openrouter/free` (Dynamic free router)
-  2. `meta-llama/llama-3.3-70b-instruct:free` (Fast 70B reasoning)
-  3. `google/gemini-2.0-flash-exp:free` (Ultra-fast multimodal)
-  4. `gemini-3.8-flash` (Direct Google API, <1s response time)
-  5. `Mock Mode` (Zero-latency offline simulation)
+- **Interactive Model Selector:** Quick-switch between Ollama, OpenRouter, and Mock modes.
 - **Live Latency Ping Test:** Button to test API connection time and measure roundtrip ping.
+
+### 4.6. 3D Memory Graph Workspace (`MemoryWorkspace.tsx` - Phase 8)
+- **3D Force-Directed Visualization:** Renders tasks, skills, and memory extractions as a living 3D constellation.
+- **Real-time Illumination:** Server-Sent Events (SSE) pulse nodes to highlight the agent's thought process in real-time.
+- **Skill Selection Modal:** Pre-select required dependencies and tools before launching an Open Chat session.
 
 ---
 

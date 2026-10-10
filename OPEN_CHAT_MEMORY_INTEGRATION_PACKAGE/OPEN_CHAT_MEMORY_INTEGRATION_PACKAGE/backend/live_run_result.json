@@ -1,0 +1,80 @@
+  [Ollama] attempt=1 model=qwen3.5:9b raw_len=139
+{
+  "status": "completed",
+  "elapsed_seconds": 98.8,
+  "model_id": "qwen3.5:9b",
+  "verification": {
+    "verdict": "PASS",
+    "checks": [
+      {
+        "rule": "rule:file_exists",
+        "description": "report.json exists",
+        "verdict": "PASS",
+        "evidence": {
+          "path": "report.json",
+          "size_bytes": 261
+        }
+      },
+      {
+        "rule": "rule:file_exists",
+        "description": "report.md exists",
+        "verdict": "PASS",
+        "evidence": {
+          "path": "report.md",
+          "size_bytes": 189
+        }
+      },
+      {
+        "rule": "rule:json_parses",
+        "description": "report.json parses as JSON",
+        "verdict": "PASS",
+        "evidence": {
+          "keys": [
+            "source",
+            "group_by",
+            "sum_column",
+            "totals"
+          ],
+          "missing_required_keys": []
+        }
+      },
+      {
+        "rule": "rule:values_match_recompute",
+        "description": "report values == recomputation from sales.csv",
+        "verdict": "PASS",
+        "evidence": {
+          "recomputed_groups": 3,
+          "mismatches": [],
+          "unreported_groups": []
+        }
+      },
+      {
+        "rule": "rule:md_sections_present",
+        "description": "report.md contains required sections",
+        "verdict": "PASS",
+        "evidence": {
+          "required": [
+            "Revenue Totals by Product"
+          ],
+          "missing": []
+        }
+      },
+      {
+        "rule": "rule:md_values_present",
+        "description": "markdown shows the computed totals",
+        "verdict": "PASS",
+        "evidence": {
+          "checked": [
+            1590.75,
+            1275.6,
+            2799.99
+          ],
+          "missing": []
+        }
+      }
+    ],
+    "summary": "Independent recomputation from source CSV included"
+  },
+  "final_result": "Task completed. Verdict: Verdict.PASS.\nValidated sales.csv, computed revenue totals by product, wrote report.json and report.md, both verified independently against a recomputation from the CSV.\n- Gadget C: 2,799.99\n- Widget A: 1,590.75\n- Widget B: 1,275.60",
+  "task_id": "96629326-dc28-4833-ae05-fd2fd49cc53d"
+}

@@ -1,42 +1,57 @@
-# Autonomous AI Agent Platform - Context & Onboarding
+# Open Chat - Autonomous AI Agent Platform (`project.md`)
 
 > **Target Audience:** Any AI assistant (like ChatGPT, Claude, Gemini) reading this file to gain full context of the repository.
 
 ## 1. Project Overview
-This project is an **Autonomous AI Agent platform** built for a hackathon. The goal is to provide a maintainable, working baseline for a multi-agent system that executes tasks end-to-end. It features persistent memory, project-based knowledge isolation, reusable skills (tools), and built-in security checks.
+This project is an **Autonomous AI Agent & Project Management Platform** known as **Open Chat** (modeled after the **Stratify** design system). Built for a hackathon and production-ready iteration, it provides an end-to-end multi-agent system executing complex goals with persistent memory, isolated project contexts, tool sandboxing, reviewer verification loops, and a cyber-deck mission control interface.
 
-Currently, it acts as a baseline that can plan, execute, and review tasks using a single LLM interface, while saving contextual data to a local SQLite database.
+Currently, it plans, executes, and reviews tasks through an autonomous ReAct-style state machine, while storing contextual embeddings and notes in a local SQLite database.
 
 ## 2. Technologies Used
 - **Backend:** Python (3.11+), FastAPI, Uvicorn, Pydantic v2, Pytest, standard `sqlite3` library.
-- **LLM Integration:** OpenRouter Free Models Router (`openrouter/free`) accessed via the `openai` Python SDK with OpenRouter's OpenAI-compatible endpoint (`https://openrouter.ai/api/v1`), alongside a built-in zero-cost `MockLLM` mode.
-- **Frontend:** React, TypeScript, Vite, Vanilla CSS (modular design system with dark mode & glassmorphism), `lucide-react` for icons.
-- **Orchestration & Tooling:** Custom state machine (Planner -> Executor -> Reviewer), restricted Python tool sandbox (safe math calculator, SQLite memory tools), one-click launcher (`start_app.bat`).
+- **LLM Integration:** Local Ollama inference (`qwen2.5:3b`), OpenRouter Free Models Router, Google Gemini API, and a built-in zero-cost `MockLLM` mode.
+- **Frontend:** React 19, TypeScript, Vite, Vanilla CSS Design System, `3d-force-graph` for 3D Memory Rendering, `lucide-react` for icons.
+- **Orchestration & Tooling:** Custom multi-agent state machine (Planner ➔ Executor ➔ Reviewer ➔ Memory Summarizer), restricted Python tool sandbox (safe math calculator, SQLite memory tools), Server-Sent Events (SSE) for realtime graph streaming.
 
 ## 3. Architecture & Decisions Made
 - **Monorepo Structure:** The codebase is split strictly into `backend/` and `frontend/` to keep concerns decoupled.
-- **Abstract Memory Pattern:** Memory is abstracted behind a `MemoryProvider` interface (`backend/app/memory/base.py`). The current implementation is `SQLiteMemoryProvider`, ensuring we can swap it out for Vector databases (for RAG) or Graph databases (like Graphify) without rewriting the agent logic.
+- **Abstract Memory Pattern:** Memory is abstracted behind a `MemoryProvider` interface (`backend/app/memory/base.py`). The current implementation is `SQLiteMemoryProvider`, ensuring we can swap it out for Vector databases (Chroma/Qdrant) or Graph databases (like Neo4j or Graphify) without rewriting the agent logic.
 - **Orchestrator-Worker Agent Pattern:** Instead of complex external frameworks (like LangChain or AutoGen), the orchestration is a custom, lightweight state machine:
   1. **Planner:** Outputs a step-by-step JSON plan.
   2. **Executor:** Uses ReAct-style loops (up to a 5-iteration limit) to pick tools (e.g., `calculator`, `save_memory`).
   3. **Reviewer:** Validates the Executor's final answer against the original request.
+  4. **Memory Persistence:** Auto-summarizes execution traces back to project or global memory.
 - **Strict JSON Outputs:** Agents are forced to output structured data matching Pydantic schemas using `response_format={"type": "json_object"}` and resilient markdown fence parsing.
 - **Mock LLM Mode:** Configured via `.env` (`USE_MOCK_LLM=True`). This allows offline UI/UX development and fast test execution without spending real API credits.
 - **Tool Sandbox:** Tools are explicitly defined Python functions. We purposefully avoid unrestricted Python `exec()` or Shell execution for security. For example, the `calculator` tool uses a strict whitelist of math characters.
-- **CSS Aesthetics:** The frontend uses deep dark themes (`#0f172a`), glassmorphism (`backdrop-filter`), and gradients to achieve a premium UI feel without heavy CSS frameworks.
+- **Stratify Design Aesthetics:** Light canvas (`#f4f6fa`), clean white card surfaces (`#ffffff`), soft floating shadows, rounded-3xl / 24px cards, vibrant blue/indigo gradients (`#2563eb`), micro-animations (soundwaves, active glow pulses), and modern typography.
 
-## 4. What Has Been Implemented (Phases 1-5)
+## 4. What Has Been Implemented (Phases 1-6)
 1. **Phase 1 (Foundation):** FastAPI backend, modular folder structure (`api/`, `agents/`, `tools/`), MockLLM, and basic pytest suite.
 2. **Phase 2 (Orchestration):** The Planner -> Executor -> Reviewer loop, tool registry, and CLI tracing.
 3. **Phase 3 (Memory & Isolation):** SQLite database creation. Memories are tagged as `global`, `project`, or `session`. Tasks can be submitted with a `project_id`. The Orchestrator automatically searches memory for context before planning and auto-summarizes the result back to memory upon completion.
-4. **Phase 4 (Frontend UI):** A React/Vite dashboard featuring a Chat Workspace, an Execution Trace panel (showing agent thoughts and tools in real-time), a Project Selector, and a Memory Explorer.
+4. **Phase 4 (Frontend UI Foundation):** React/Vite dashboard featuring Chat Workspace, Execution Trace, Project Selector, and Memory Explorer.
 5. **Phase 5 (OpenRouter Free Models Integration & One-Click Launch):** 
    - Integrated OpenRouter's Free Models Router (`openrouter/free`) via `https://openrouter.ai/api/v1` using OpenAI SDK.
-   - Dynamic model ID detection (`response.model`) capturing the exact underlying model selected per request (e.g. `meta-llama/llama-3.3-70b-instruct:free`, `cohere/north-mini-code:free`, `poolside/laguna-xs-2.1:free`).
+   - Dynamic model ID detection (`response.model`) capturing the exact underlying model selected per request.
    - Resilient JSON schema extraction with retry protection against non-instruct or moderation models.
    - Enhanced tool argument normalization in `registry.py` and clear parameter documentation in orchestrator prompts.
    - Built a live test verification suite (`backend/live_tests.py`) covering direct LLM connection, structured planning, tool execution verification, reviewer approval, and SQLite persistence.
    - Created `start_app.bat` for one-click startup of both backend and frontend servers with automatic browser launch.
+6. **Phase 6 (Stratify UI Redesign & "Open Chat" Brand Overhaul):**
+   - Transformed UI into the modern Stratify dashboard aesthetics using pure zero-dependency CSS tokens.
+   - Built the Bento Dashboard View and Open Chat Mission Control with 4-stage Agent Progress Steppers.
+7. **Phase 7 (AI Context Splitting & Packaging for Kotlin Integration):**
+   - **Smart Splitting:** Built `split_project.py` and `zip_extra.py` to divide the main monorepo into 6 balanced `.zip` packages (under 10MB each) located inside the `parts/` folder. 
+   - **External Modules:** Additionally compressed independent submodules (`MiroFish` and `graphify`) into their own isolated `.zip` files within `parts/`. 
+   - **AI Context Injection:** Embedded global context files (`README.md`, `project.md`, `design.md`) and a `PROJECT_STRUCTURE.txt` manifest into every single zip file so that any AI reading a single part automatically understands the global project architecture.
+8. **Phase 8 (Memory Graph Integration & Local Inference):**
+   - **Local AI Engine:** Migrated the backend inference engine from OpenRouter to local **Ollama** running `qwen2.5:3b`. This vastly improves reliability and deterministic reasoning for complex tasks while keeping data private.
+   - **Memory Workspace UI:** Implemented a new "Memory Management" workspace containing a real-time **3D Force Graph** representation of all memory nodes, skills, tasks, and dependencies.
+   - **RAG & Provenance:** Built a memory RAG pipeline that pulls EXPLICIT, EXTRACTED, and INFERRED nodes into the execution context.
+   - **Failure Learning:** Implemented logic where failed executions trigger an extraction loop to document the failure as a memory node, which the Planner reviews to avoid repeating mistakes.
+   - **Skill Selection Modal:** Wired a dynamic frontend modal in the Open Chat workspace, allowing users to selectively browse and inject required dependencies and tools into the initial context.
+   - **Realtime SSE:** Connected the backend DAG execution engine to the frontend Memory Workspace via Server-Sent Events (SSE), dynamically illuminating graph nodes as the LLM touches them in real-time.
 
 ## 5. What Went Wrong During Implementation (Gotchas & Fixes)
 When an AI works on this project in the future, watch out for these known issues that we already solved:
@@ -61,9 +76,9 @@ When an AI works on this project in the future, watch out for these known issues
    - *The Issue:* The memory tests initially used a physical `test_memory.db` file. During teardown, Windows threw a Permission Error because the SQLite connection remained open/cached, preventing file deletion.
    - *The Fix:* We migrated the pytest fixtures to use a unique shared in-memory database URI (`file:memdb_...?mode=memory&cache=shared`) and updated the `SQLiteMemoryProvider` to support passing `uri=True` to `sqlite3.connect()`.
 
-6. **TypeScript `verbatimModuleSyntax` Errors**
-   - *The Issue:* During Phase 4 frontend compilation (`npm run build`), Vite/TypeScript threw `error TS1484` complaining that types must be imported using a type-only import.
-   - *The Fix:* Explicitly updated imports across React components to use `import type { Project, MemoryItem } from './types'`.
+6. **TypeScript `noUnusedLocals` / `verbatimModuleSyntax`**
+   - *The Issue:* Strict TypeScript settings in `tsconfig.app.json` cause builds to fail if imports are unused or if type imports are imported as values.
+   - *The Fix:* Strictly prune unused imports across all TSX view files and use `import type { Project, MemoryItem } from './types'`.
 
 7. **Environment File Security (.env in git)**
    - *The Issue:* The initial repository `.gitignore` omitted `.env`, which could accidentally lead to leaking API keys.
@@ -73,15 +88,24 @@ When an AI works on this project in the future, watch out for these known issues
    - *The Issue:* Tasks submitted to the agent can take 20–45 seconds before the final result is displayed in the UI. 
    - *Why It Happens:* The orchestration is a multi-step sequential state machine (Planner -> Executor [Step 1] -> Tool Execution -> Executor [Step 2] -> Reviewer -> Memory Auto-Summary). Each task makes 4 to 5 separate LLM API roundtrips. When using the generic `openrouter/free` router, free-tier upstream providers often have cold-start queueing (5–12s per roundtrip).
    - *How to Speed It Up:*
-     1. **Target Specific Fast Free Models in `.env`:** Instead of the generic `openrouter/free` router (which adds routing delay), specify high-throughput free models directly:
+     1. **Target Specific Fast Free Models in `.env`:** Specify high-throughput free models directly:
         - `OPENROUTER_MODEL=meta-llama/llama-3.3-70b-instruct:free`
         - `OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free`
         - `OPENROUTER_MODEL=mistralai/mistral-7b-instruct:free`
      2. **Use Direct Gemini Provider:** Setting `USE_MOCK_LLM=False` with `GEMINI_API_KEY` and `GEMINI_MODEL=gemini-3.8-flash` processes each agent step in ~600–900ms.
-     3. **Frontend Multi-Stage Progress Stepper:** Described in [design.md](file:///d:/project/Thtava%20final/design.md), visual stage transitions (Planning ⏳ -> Executing ⚙️ -> Reviewing 🔍 -> Done ✅) provide immediate visual feedback.
+     3. **Frontend Multi-Stage Progress Stepper:** Visual stage transitions in `ChatWorkspace.tsx` (`Planning ⏳` ➔ `Executing ⚙️` ➔ `Reviewing 🔍` ➔ `Memory 💾`) provide immediate animated feedback and eliminate perceived wait times.
 
 ## 6. How to Run the Platform
-- **Option A (One-Click Windows):** Double-click or run `start_app.bat`.
+
+### Step 1: Start Local AI Engine
+Because the platform's reasoning engine runs entirely offline on your machine, you must install [Ollama](https://ollama.com/) and download the specific model used for logic execution:
+1. Ensure Ollama is running.
+2. Run `ollama run qwen2.5:3b` in your terminal.
+3. Once downloaded, the backend can automatically connect to it via `http://localhost:11434`.
+
+### Step 2: Launch Platform
+- **Option A (One-Click Windows EXE - Recommended):** Double-click `OpenChat.exe` in the root folder. This automatically starts the backend API, serves the production frontend, checks Ollama, and opens your browser without any terminal windows!
+- **Option B (One-Click Batch Script):** Double-click or run `start_app.bat`. This automatically starts the backend API, the React Vite server, and opens your browser in terminal windows.
 - **Option B (PowerShell Commands):**
   1. Backend:
      ```powershell
@@ -97,11 +121,9 @@ When an AI works on this project in the future, watch out for these known issues
   3. Open `http://localhost:5173` in your browser.
 
 ## 7. UI/UX & Frontend Design System
-A comprehensive design system, component hierarchy, color tokens, and interface overhaul blueprint is documented in [design.md](file:///d:/project/Thtava%20final/design.md).
+The design specification and UX blueprint are documented in [design.md](file:///d:/project/Thtava%20final/design.md), and the visual design reference template is located in [stitch_stratify_ai_dashboard_ui/code.html](file:///d:/project/Thtava%20final/stitch_stratify_ai_dashboard_ui/code.html).
 
 ## 8. Future Roadmap (Not Yet Implemented)
 - **Vector RAG:** Swapping/extending SQLite with Chroma/Qdrant for semantic search over ingested documents.
-- **Graph Memory:** Integrating Neo4j or Graphify to store entities, relationships, and concepts across projects.
 - **n8n Webhooks:** Allowing the Executor to call n8n webhooks as "tools", and allowing n8n to trigger the FastAPI endpoints.
-- **Human-in-the-Loop:** Pausing the execution loop in the backend to wait for a human approval via the React UI before executing sensitive tools.
-- **Streaming Execution Traces (SSE / WebSockets):** Streaming each agent state step in real-time to the frontend UI as it occurs.
+- **Human-in-the-Loop:** Pausing the execution loop in the backend to wait for human approval via the React UI before executing sensitive tools.

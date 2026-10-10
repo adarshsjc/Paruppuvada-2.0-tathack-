@@ -6,7 +6,13 @@ backend/__pycache__/
 test_memory.db
 memory.db
 *.db
+*.db-shm
+*.db-wal
 backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+*.log
+launcher_log.txt
 
 # Node
 frontend/node_modules/
@@ -18,3 +24,8 @@ frontend/.env.local
 .env
 *.env
 backend/.env
+
+# External reference repos
+MiroFish/
+graphify/
+
