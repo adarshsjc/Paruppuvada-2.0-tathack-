@@ -62,11 +62,21 @@ export async function pingBackend(): Promise<{ status: string; latencyMs: number
   return { status: data.status, latencyMs, provider: data.provider, model: data.model };
 }
 
-export async function submitTask(description: string, projectId?: string, selectedSkills?: string[]): Promise<{status: string, result: string, details: TaskState}> {
+export async function submitTask(
+  description: string, 
+  projectId?: string, 
+  selectedSkills?: string[], 
+  mode: 'simple' | 'complex' = 'simple'
+): Promise<{status: string, result: string, details: TaskState}> {
   const res = await fetch(`${API_BASE}/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ description, project_id: projectId || null, selected_skills: selectedSkills })
+    body: JSON.stringify({ 
+      description, 
+      project_id: projectId || null, 
+      selected_skills: selectedSkills,
+      mode 
+    })
   });
   if (!res.ok) {
      const error = await res.json().catch(() => ({detail: res.statusText}));

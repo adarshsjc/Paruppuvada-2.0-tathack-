@@ -13,7 +13,8 @@ import {
   ShieldCheck, 
   BrainCircuit, 
   CheckCircle2,
-  Trash2
+  Trash2,
+  Zap
 } from 'lucide-react';
 import { submitTask } from '../api';
 import type { TaskState } from '../types';
@@ -25,6 +26,7 @@ interface Message {
   state?: TaskState;
   timestamp?: string;
   latencySeconds?: number;
+  mode?: 'simple' | 'complex';
 }
 
 export default function ChatWorkspace({ 
@@ -41,11 +43,13 @@ export default function ChatWorkspace({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [chatMode, setChatMode] = useState<'simple' | 'complex'>('simple');
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'agent',
-      content: "Hello! I'm Open Chat, your autonomous project intelligence engine. I can decompose goals, invoke arithmetic or memory tools, and verify outputs through multi-agent collaboration. How can I help?",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      content: "Hello! I'm Open Chat, powered by local Qwen 2.5:3B on Ollama. Choose 'Simple' mode for instant terminal-style answers, or 'Complex' mode to use persistent memory, parallel agents, and verification.",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      mode: 'simple'
     }
   ]);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
@@ -74,18 +78,22 @@ export default function ChatWorkspace({
       interval = setInterval(() => {
         const secs = Math.floor((Date.now() - startTime) / 1000);
         setElapsedTimer(secs);
-        // Animate stepper nodes
-        if (secs < 3) setActiveStepIndex(0);
-        else if (secs < 8) setActiveStepIndex(1);
-        else if (secs < 13) setActiveStepIndex(2);
-        else setActiveStepIndex(3);
+        if (chatMode === 'complex') {
+          // Animate stepper nodes for complex multi-agent loop
+          if (secs < 3) setActiveStepIndex(0);
+          else if (secs < 8) setActiveStepIndex(1);
+          else if (secs < 13) setActiveStepIndex(2);
+          else setActiveStepIndex(3);
+        } else {
+          setActiveStepIndex(0);
+        }
       }, 500);
     } else {
       setElapsedTimer(0);
       setActiveStepIndex(3);
     }
     return () => clearInterval(interval);
-  }, [loading]);
+  }, [loading, chatMode]);
 
   // Handle initial prompt from Dashboard view
   useEffect(() => {
@@ -99,21 +107,27 @@ export default function ChatWorkspace({
     if (!taskText.trim() || loading) return;
     
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setMessages(prev => [...prev, { role: 'user', content: taskText, timestamp: timeStr }]);
+    setMessages(prev => [...prev, { role: 'user', content: taskText, timestamp: timeStr, mode: chatMode }]);
     setInput('');
     setLoading(true);
     setError('');
     const startTime = Date.now();
 
     try {
-      const res = await submitTask(taskText, projectId, currentSkills.length > 0 ? currentSkills : undefined);
+      const res = await submitTask(
+        taskText, 
+        projectId, 
+        currentSkills.length > 0 ? currentSkills : undefined,
+        chatMode
+      );
       const latency = Math.round((Date.now() - startTime) / 100) / 10;
       const agentMsg: Message = { 
         role: 'agent', 
         content: res.result || 'Task completed without final answer text.',
         state: res.details,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        latencySeconds: latency
+        latencySeconds: latency,
+        mode: chatMode
       };
       setMessages(prev => [...prev, agentMsg]);
       setSelectedTraceState(res.details);
@@ -166,6 +180,60 @@ export default function ChatWorkspace({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Simple vs Complex Mode Toggle */}
+            <div style={{ 
+              display: 'flex', 
+              background: '#f1f5f9', 
+              padding: '2px', 
+              borderRadius: '8px', 
+              border: '1px solid #e2e8f0' 
+            }}>
+              <button 
+                type="button"
+                onClick={() => setChatMode('simple')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '4px 10px',
+                  fontSize: '11px',
+                  fontWeight: chatMode === 'simple' ? 700 : 500,
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: chatMode === 'simple' ? '#ffffff' : 'transparent',
+                  color: chatMode === 'simple' ? '#b45309' : '#64748b',
+                  boxShadow: chatMode === 'simple' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                  cursor: 'pointer'
+                }}
+                title="Simple Mode: Fast direct response with local Qwen 2.5:3B (~1-2s)"
+              >
+                <Zap size={13} color="#f59e0b" />
+                <span>Simple</span>
+              </button>
+              <button 
+                type="button"
+                onClick={() => setChatMode('complex')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '4px 10px',
+                  fontSize: '11px',
+                  fontWeight: chatMode === 'complex' ? 700 : 500,
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: chatMode === 'complex' ? '#ffffff' : 'transparent',
+                  color: chatMode === 'complex' ? '#4338ca' : '#64748b',
+                  boxShadow: chatMode === 'complex' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                  cursor: 'pointer'
+                }}
+                title="Complex Mode: Uses persistent memory, 3 parallel agents, and verification"
+              >
+                <BrainCircuit size={13} color="#6366f1" />
+                <span>Complex</span>
+              </button>
+            </div>
+
             <button 
               className={`btn-ghost-outline ${currentSkills.length > 0 ? 'pill-emerald-cat' : ''}`}
               style={{ padding: '6px 10px', fontSize: '11px', borderColor: currentSkills.length > 0 ? '#10b981' : undefined }}
@@ -180,7 +248,8 @@ export default function ChatWorkspace({
               onClick={() => setMessages([{
                 role: 'agent',
                 content: "Open Chat conversation reset. How can I assist you now?",
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                mode: chatMode
               }])}
               title="Clear chat session"
             >
@@ -191,36 +260,48 @@ export default function ChatWorkspace({
 
         {/* Real-Time Agent Progress Stepper */}
         {loading && (
-          <div style={{ padding: '12px 20px', backgroundColor: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
-            <div className="agent-stepper-box">
-              <div className="stepper-header-row">
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Loader2 size={14} className="spinner" />
-                  Open Chat Executing Autonomous Loop
+          <div style={{ padding: '12px 20px', backgroundColor: chatMode === 'simple' ? '#fffbeb' : '#f8fafc', borderBottom: `1px solid ${chatMode === 'simple' ? '#fef3c7' : '#f1f5f9'}` }}>
+            {chatMode === 'complex' ? (
+              <div className="agent-stepper-box">
+                <div className="stepper-header-row">
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Loader2 size={14} className="spinner" />
+                    Complex Mode: Searching Memory & Executing Multi-Agent Loop
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#2563eb' }}>
+                    Elapsed: {elapsedTimer}s
+                  </span>
+                </div>
+                <div className="stepper-nodes-row">
+                  <div className={`stepper-node ${activeStepIndex === 0 ? 'active-step' : activeStepIndex > 0 ? 'completed-step' : ''}`}>
+                    <BrainCircuit size={14} />
+                    <span>1. Memory & Plan</span>
+                  </div>
+                  <div className={`stepper-node ${activeStepIndex === 1 ? 'active-step' : activeStepIndex > 1 ? 'completed-step' : ''}`}>
+                    <Cpu size={14} />
+                    <span>2. Parallel Agents</span>
+                  </div>
+                  <div className={`stepper-node ${activeStepIndex === 2 ? 'active-step' : activeStepIndex > 2 ? 'completed-step' : ''}`}>
+                    <ShieldCheck size={14} />
+                    <span>3. Judge Review</span>
+                  </div>
+                  <div className={`stepper-node ${activeStepIndex === 3 ? 'active-step' : activeStepIndex > 3 ? 'completed-step' : ''}`}>
+                    <CheckCircle2 size={14} />
+                    <span>4. Memory Write</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '12px', color: '#b45309', fontWeight: 600 }}>
+                  <Loader2 size={14} className="spinner" color="#f59e0b" />
+                  Simple Mode: Direct Qwen 2.5:3B terminal response (no memory wait)...
                 </span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#2563eb' }}>
-                  Elapsed: {elapsedTimer}s
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#b45309', fontWeight: 600 }}>
+                  {elapsedTimer}s
                 </span>
               </div>
-              <div className="stepper-nodes-row">
-                <div className={`stepper-node ${activeStepIndex === 0 ? 'active-step' : activeStepIndex > 0 ? 'completed-step' : ''}`}>
-                  <BrainCircuit size={14} />
-                  <span>1. Planning</span>
-                </div>
-                <div className={`stepper-node ${activeStepIndex === 1 ? 'active-step' : activeStepIndex > 1 ? 'completed-step' : ''}`}>
-                  <Cpu size={14} />
-                  <span>2. Tool Run</span>
-                </div>
-                <div className={`stepper-node ${activeStepIndex === 2 ? 'active-step' : activeStepIndex > 2 ? 'completed-step' : ''}`}>
-                  <ShieldCheck size={14} />
-                  <span>3. Reviewer</span>
-                </div>
-                <div className={`stepper-node ${activeStepIndex === 3 ? 'active-step' : activeStepIndex > 3 ? 'completed-step' : ''}`}>
-                  <CheckCircle2 size={14} />
-                  <span>4. Memory</span>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -239,8 +320,17 @@ export default function ChatWorkspace({
                     <>
                       <Sparkles size={13} />
                       Open Chat
+                      {msg.mode === 'simple' ? (
+                        <span style={{ fontSize: '10px', color: '#b45309', background: '#fffbeb', border: '1px solid #fef3c7', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
+                          ⚡ Simple
+                        </span>
+                      ) : msg.mode === 'complex' ? (
+                        <span style={{ fontSize: '10px', color: '#4338ca', background: '#eef2ff', border: '1px solid #e0e7ff', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
+                          🧠 Complex
+                        </span>
+                      ) : null}
                       {msg.latencySeconds && (
-                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 500, marginLeft: 4 }}>
+                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 500, marginLeft: 2 }}>
                           ({msg.latencySeconds}s)
                         </span>
                       )}
@@ -286,9 +376,11 @@ export default function ChatWorkspace({
           {/* Loading Indicator */}
           {loading && (
             <div className="chat-bubble bubble-agent" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Loader2 size={16} className="spinner" color="#2563eb" />
+              <Loader2 size={16} className="spinner" color={chatMode === 'simple' ? '#f59e0b' : '#2563eb'} />
               <span style={{ fontSize: '13px', color: '#475569' }}>
-                Open Chat is synthesizing steps and executing tools...
+                {chatMode === 'simple'
+                  ? '⚡ Qwen 2.5:3B is answering directly (Simple mode)...'
+                  : '🧠 Open Chat is searching memory and synthesizing multi-agent solutions...'}
               </span>
             </div>
           )}
@@ -306,27 +398,114 @@ export default function ChatWorkspace({
 
         {/* Quick Action Suggestion Pills */}
         <div style={{ padding: '8px 20px', borderTop: '1px solid #f8fafc', display: 'flex', gap: 6, overflowX: 'auto' }}>
-          <button 
-            className="chip-btn" 
-            style={{ fontSize: '11px', padding: '4px 10px', whiteSpace: 'nowrap' }}
-            onClick={() => handleSendPrompt('Calculate 347 * 829')}
-          >
-            ⚡ Calculate 347 * 829
-          </button>
-          <button 
-            className="chip-btn" 
-            style={{ fontSize: '11px', padding: '4px 10px', whiteSpace: 'nowrap' }}
-            onClick={() => handleSendPrompt('Save project note: Verified multi-agent DAG pipeline with review scoring')}
-          >
-            📝 Save Project Note
-          </button>
-          <button 
-            className="chip-btn" 
-            style={{ fontSize: '11px', padding: '4px 10px', whiteSpace: 'nowrap' }}
-            onClick={() => handleSendPrompt('Search memory for project')}
-          >
-            🔍 Search Memory
-          </button>
+          {chatMode === 'simple' ? (
+            <>
+              <button 
+                className="chip-btn" 
+                style={{ fontSize: '11px', padding: '4px 10px', whiteSpace: 'nowrap' }}
+                onClick={() => handleSendPrompt('What is 25 * 4?')}
+              >
+                ⚡ What is 25 * 4?
+              </button>
+              <button 
+                className="chip-btn" 
+                style={{ fontSize: '11px', padding: '4px 10px', whiteSpace: 'nowrap' }}
+                onClick={() => handleSendPrompt('Explain autonomous AI agents in 2 short sentences.')}
+              >
+                ⚡ Explain Autonomous Agents
+              </button>
+              <button 
+                className="chip-btn" 
+                style={{ fontSize: '11px', padding: '4px 10px', whiteSpace: 'nowrap' }}
+                onClick={() => handleSendPrompt('Write a quick Python hello world script.')}
+              >
+                ⚡ Python Hello World
+              </button>
+            </>
+          ) : (
+            <>
+              <button 
+                className="chip-btn" 
+                style={{ fontSize: '11px', padding: '4px 10px', whiteSpace: 'nowrap' }}
+                onClick={() => handleSendPrompt('Calculate 347 * 829')}
+              >
+                🧠 Calculate 347 * 829
+              </button>
+              <button 
+                className="chip-btn" 
+                style={{ fontSize: '11px', padding: '4px 10px', whiteSpace: 'nowrap' }}
+                onClick={() => handleSendPrompt('Save project note: Verified multi-agent DAG pipeline with review scoring')}
+              >
+                📝 Save Project Note (Memory)
+              </button>
+              <button 
+                className="chip-btn" 
+                style={{ fontSize: '11px', padding: '4px 10px', whiteSpace: 'nowrap' }}
+                onClick={() => handleSendPrompt('Search memory for project')}
+              >
+                🔍 Search Memory
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Mode Selector Strip */}
+        <div style={{ 
+          padding: '6px 20px', 
+          backgroundColor: '#f8fafc', 
+          borderTop: '1px solid #f1f5f9', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          fontSize: '11px' 
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ color: '#64748b', fontWeight: 600 }}>Mode:</span>
+            <button
+              type="button"
+              onClick={() => setChatMode('simple')}
+              style={{
+                padding: '3px 8px',
+                borderRadius: 6,
+                fontSize: '11px',
+                fontWeight: 600,
+                border: chatMode === 'simple' ? '1px solid #f59e0b' : '1px solid #cbd5e1',
+                background: chatMode === 'simple' ? '#fffbeb' : '#ffffff',
+                color: chatMode === 'simple' ? '#b45309' : '#64748b',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}
+            >
+              <Zap size={12} color="#f59e0b" /> Simple (Fast Qwen 2.5)
+            </button>
+            <button
+              type="button"
+              onClick={() => setChatMode('complex')}
+              style={{
+                padding: '3px 8px',
+                borderRadius: 6,
+                fontSize: '11px',
+                fontWeight: 600,
+                border: chatMode === 'complex' ? '1px solid #6366f1' : '1px solid #cbd5e1',
+                background: chatMode === 'complex' ? '#eef2ff' : '#ffffff',
+                color: chatMode === 'complex' ? '#4338ca' : '#64748b',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}
+            >
+              <BrainCircuit size={12} color="#6366f1" /> Complex (Agent + Memory)
+            </button>
+          </div>
+          <div style={{ color: '#64748b', fontSize: '11px' }}>
+            {chatMode === 'simple' 
+              ? '⚡ Terminal speed (~1-2s). Direct prompt response.' 
+              : '🧠 Deep reasoning. Uses memory, 3 agents & review.'
+            }
+          </div>
         </div>
 
         {/* Bottom Input Area */}
@@ -338,13 +517,17 @@ export default function ChatWorkspace({
             }} 
             className="chat-input-pill-wrap"
           >
-            <Sparkles size={18} color="#2563eb" style={{ flexShrink: 0 }} />
+            <Sparkles size={18} color={chatMode === 'simple' ? '#f59e0b' : '#2563eb'} style={{ flexShrink: 0 }} />
             <input 
               type="text" 
               className="chat-text-input"
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Ask Open Chat to solve a task, compute, or recall memory..."
+              placeholder={
+                chatMode === 'simple'
+                  ? "Ask Qwen 2.5:3B directly (Fast terminal reply without memory wait)..."
+                  : "Ask Open Chat complex task (Searches memory, 3-agent ensemble, DAG verification)..."
+              }
               disabled={loading}
             />
             <button 
@@ -427,12 +610,18 @@ export default function ChatWorkspace({
                   </h3>
 
                   {latestState.execution_steps.map((step, idx) => (
-                    <div key={idx} className="trace-step-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+                    <div key={idx} className="trace-step-card" style={{ borderLeft: `4px solid ${step.mode === 'simple' ? '#f59e0b' : '#3b82f6'}` }}>
                       <div className="trace-card-top">
-                        <span className="step-agent-badge badge-executor">
-                          Iteration #{idx + 1} • Executor
-                        </span>
-                        {step.action?.tool && (
+                        {step.mode === 'simple' ? (
+                          <span className="step-agent-badge" style={{ backgroundColor: '#fffbeb', color: '#b45309' }}>
+                            ⚡ Simple Mode · Direct Qwen 2.5:3B
+                          </span>
+                        ) : (
+                          <span className="step-agent-badge badge-executor">
+                            Iteration #{idx + 1} • Executor
+                          </span>
+                        )}
+                        {step.action?.tool && step.action?.tool !== 'none' && (
                           <span style={{ fontSize: '11px', fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: 6 }}>
                             Tool: {step.action.tool}
                           </span>

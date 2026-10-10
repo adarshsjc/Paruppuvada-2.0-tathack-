@@ -24,3 +24,21 @@ def test_create_task_mock_mode():
 def test_create_task_empty():
     response = client.post("/api/v1/tasks", json={"description": "   "})
     assert response.status_code == 400
+
+def test_create_task_simple_mode():
+    with patch('app.config.settings.use_mock_llm', True):
+        response = client.post("/api/v1/tasks", json={"description": "What is 2+2?", "mode": "simple"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "completed"
+        assert "[MOCK]" in data["result"]
+        assert data["details"]["execution_steps"][0]["mode"] == "simple"
+
+def test_create_task_complex_mode():
+    with patch('app.config.settings.use_mock_llm', True):
+        response = client.post("/api/v1/tasks", json={"description": "Calculate 347 * 829", "mode": "complex"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] in ["completed", "failed"]
+        assert "details" in data
+        assert "task_id" in data["details"]

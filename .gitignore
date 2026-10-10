@@ -31,3 +31,8 @@ graphify/
 
 # Sandboxed execution workspace
 workspace/
+
+# Build artifacts
+build/
+dist/
+*.spec
