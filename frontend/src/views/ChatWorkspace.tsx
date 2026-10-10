@@ -60,6 +60,12 @@ export default function ChatWorkspace({
   
   const [currentSkills, setCurrentSkills] = useState<string[]>(selectedSkills || []);
   const [isSkillModalOpen, setIsSkillModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (selectedSkills && selectedSkills.length > 0) {
+      setCurrentSkills(selectedSkills);
+    }
+  }, [selectedSkills]);
   
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
@@ -257,6 +263,62 @@ export default function ChatWorkspace({
             </button>
           </div>
         </div>
+
+        {/* Active Skills Ribbon when skills are configured */}
+        {currentSkills.length > 0 && (
+          <div style={{ 
+            padding: '7px 20px', 
+            backgroundColor: '#ecfdf5', 
+            borderBottom: '1px solid #d1fae5', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            fontSize: '11px',
+            gap: 12
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#047857', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                <BrainCircuit size={13} color="#10b981" />
+                <span>Configured Skills ({currentSkills.length}):</span>
+              </div>
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                {currentSkills.map(sid => (
+                  <span 
+                    key={sid} 
+                    style={{ 
+                      background: '#ffffff', 
+                      border: '1px solid #a7f3d0', 
+                      borderRadius: 4, 
+                      padding: '1px 6px', 
+                      color: '#065f46',
+                      fontWeight: 600,
+                      fontSize: '10px'
+                    }}
+                  >
+                    {sid.replace('skill:', '')}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <button 
+              type="button" 
+              onClick={() => setIsSkillModalOpen(true)}
+              style={{ 
+                background: 'transparent', 
+                border: 'none', 
+                color: '#059669', 
+                textDecoration: 'underline', 
+                cursor: 'pointer',
+                fontSize: '11px',
+                fontWeight: 600,
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Modify
+            </button>
+          </div>
+        )}
 
         {/* Real-Time Agent Progress Stepper */}
         {loading && (

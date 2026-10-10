@@ -106,6 +106,11 @@ function App() {
             selectedId={selectedProjectId} 
             onSelect={setSelectedProjectId} 
             onRefresh={loadProjects} 
+            onOpenChatWithProject={(projectId: string, skills?: string[]) => {
+              setSelectedProjectId(projectId);
+              if (skills) setSelectedSkills(skills);
+              setActiveView('open_chat');
+            }}
           />
         );
       case 'memory':
