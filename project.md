@@ -3,112 +3,147 @@
 > **Target Audience:** Any AI assistant (like ChatGPT, Claude, Gemini) reading this file to gain full context of the repository.
 
 ## 1. Project Overview
-This project is an **Autonomous AI Agent & Project Management Platform** known as **Open Chat** (modeled after the **Stratify** design system). Built for a hackathon and production-ready iteration, it provides an end-to-end multi-agent system executing complex goals with persistent memory, isolated project contexts, tool sandboxing, reviewer verification loops, and a cyber-deck mission control interface.
+This project is an **Autonomous AI Agent & Project Management Platform** known as **Open Chat** (modeled after the **Stratify** design system). Built for a hackathon and production-ready iteration, it provides an end-to-end multi-agent system executing complex goals with persistent memory, isolated project contexts, tool sandboxing, reviewer verification loops, 3D memory graph visualizers, and an interactive cyber-deck workspace interface.
 
-Currently, it plans, executes, and reviews tasks through an autonomous ReAct-style state machine and parallel solution agent ensemble, while storing contextual embeddings, nodes, and notes in a local SQLite database and graph memory store.
+The platform provides a **Dual Chat Architecture**:
+- **Simple Mode:** Fast, terminal-style direct inference with local Ollama (`qwen2.5:3b`) completing in ~1–2 seconds with zero memory/orchestrator overhead.
+- **Complex Mode:** Full multi-agent deliberation loop (Autonomous Planner -> Direct Solver, Critical Thinker, Research Synthesizer -> Judge Evaluation -> Reviewer & Verification -> SQLite & Graph Memory updates).
+
+---
 
 ## 2. Technologies Used
 - **Backend:** Python (3.11+), FastAPI, Uvicorn, Pydantic v2, Pytest, standard `sqlite3` library.
-- **LLM Integration:** Local Ollama inference (`qwen2.5:3b`), OpenRouter Free Models Router, Google Gemini API, and a built-in zero-cost `MockLLM` mode.
-- **Frontend:** React 19, TypeScript, Vite, Vanilla CSS Design System, `3d-force-graph` for 3D Memory Rendering, `lucide-react` for icons.
-- **Orchestration & Tooling:** Custom multi-agent state machine (Planner ➔ Executor ➔ Reviewer ➔ Memory Summarizer) plus parallel ensemble agents with judge selection, restricted Python tool sandbox (safe math calculator, SQLite memory tools, web search), Server-Sent Events (SSE) for realtime graph streaming.
+- **LLM Integration:** Local Ollama inference (`qwen2.5:3b` at `http://127.0.0.1:11434`), OpenRouter Free Models Router, Google Gemini API, and built-in zero-cost `MockLLM` mode.
+- **Frontend:** React 19, TypeScript, Vite, Vanilla CSS Design System (Stratify tokens), `3d-force-graph` for 3D Memory Rendering, `lucide-react` for icons.
+- **Orchestration & Tooling:** 
+  - Dual-mode chat execution (Instant Direct vs Multi-Agent Ensemble).
+  - Parallel agent ensemble with Judge Selection rubric (`backend/app/agents/ensemble.py`).
+  - Restricted Python tool sandbox (safe math calculator, SQLite memory tools, web search, API client simulation, git ops).
+  - Graph Store (`SQLiteGraphStore`) with auto-seeding on startup.
+  - Server-Sent Events (SSE) for realtime DAG execution streaming.
+- **Packaging & Desktop:** PyInstaller launcher (`OpenChat.exe`) coordinating background Python Uvicorn and Vite servers with automated browser launch and process lifecycle cleanup.
+
+---
 
 ## 3. Architecture & Decisions Made
-- **Monorepo Structure:** The codebase is split strictly into `backend/` and `frontend/` to keep concerns decoupled.
-- **Abstract Memory Pattern:** Memory is abstracted behind a `MemoryProvider` interface (`backend/app/memory/base.py`). The current implementation is `SQLiteMemoryProvider`, ensuring we can swap it out for Vector databases (Chroma/Qdrant) or Graph databases (like Neo4j or Graphify) without rewriting the agent logic.
-- **Orchestrator-Worker Agent Pattern:** Instead of complex external frameworks (like LangChain or AutoGen), the orchestration is a custom, lightweight state machine:
-  1. **Planner:** Outputs a step-by-step JSON plan.
-  2. **Executor:** Uses ReAct-style loops (up to a 5-iteration limit) to pick tools (e.g., `calculator`, `save_memory`).
-  3. **Reviewer:** Validates the Executor's final answer against the original request.
-  4. **Memory Persistence:** Auto-summarizes execution traces back to project or global memory.
-- **Parallel Solutions Ensemble:** Tasks can also be solved by concurrent solution agents with judge selection, recording individual failures without discarding successful candidates.
-- **Strict JSON Outputs:** Agents are forced to output structured data matching Pydantic schemas using `response_format={"type": "json_object"}` and resilient markdown fence parsing.
-- **Mock LLM Mode:** Configured via `.env` (`USE_MOCK_LLM=True`). This allows offline UI/UX development and fast test execution without spending real API credits.
-- **Tool Sandbox:** Tools are explicitly defined Python functions. We purposefully avoid unrestricted Python `exec()` or Shell execution for security. For example, the `calculator` tool uses a strict whitelist of math characters.
-- **Stratify Design Aesthetics:** Light canvas (`#f4f6fa`), clean white card surfaces (`#ffffff`), soft floating shadows, rounded-3xl / 24px cards, vibrant blue/indigo gradients (`#2563eb`), micro-animations (soundwaves, active glow pulses), and modern typography.
 
-## 4. What Has Been Implemented (Phases 1-8)
-1. **Phase 1 (Foundation):** FastAPI backend, modular folder structure (`api/`, `agents/`, `tools/`), MockLLM, and basic pytest suite.
-2. **Phase 2 (Orchestration):** The Planner -> Executor -> Reviewer loop, tool registry, and CLI tracing.
-3. **Phase 3 (Memory & Isolation):** SQLite database creation. Memories are tagged as `global`, `project`, or `session`. Tasks can be submitted with a `project_id`. The Orchestrator automatically searches memory for context before planning and auto-summarizes the result back to memory upon completion.
+### 3.1. Monorepo Structure
+The repository is split strictly into `backend/` and `frontend/` to keep concerns decoupled, with desktop launch utilities in `launcher/` and packaged deliverables in `parts/`.
+
+### 3.2. Dual Execution Engine (Simple Mode vs Complex Mode)
+- **Simple Mode (`/api/v1/chat/simple`):** 
+  - Directly proxies user prompts to the local LLM (`qwen2.5:3b` via Ollama) with a concise, helpful system instruction.
+  - Skips memory RAG searches, step planning, parallel ensemble solvers, and post-verification passes.
+  - Delivers answers at terminal speeds (~1–2 seconds), matching user expectations for everyday chatting and rapid inquiries.
+- **Complex Mode (`/api/v1/tasks` + `/stream`):**
+  - Engages the full multi-agent deliberation pipeline.
+  - Retrieves semantic and graph context from SQLite memory.
+  - Grounds prompts in the project's selected skill capabilities (`Direct Solver`, `Critical Thinker`, `Research Synthesizer`).
+  - Executes tools within the sandbox, scores outputs via the Judge, and persists reflections back to memory and graph.
+
+### 3.3. 24-Skill Capabilities & Graph Ecosystem
+- **Skill Manifests (`backend/app/skills/library.py`):** 24 distinct capabilities organized across 6 core categories:
+  1. `cat:core-utilities`: Calculation, String Ops, File Ops, System Shell.
+  2. `cat:knowledge-memory`: Graphify RAG, SQLite Memory, Concept Linking, Failure Extraction.
+  3. `cat:web-research`: Search, Content Extraction, Fact Checking, Competitive Benchmarking.
+  4. `cat:verification-quality`: Code Linting, Unit Test Runner, Reviewer Audit.
+  5. `cat:architecture-synthesis`: DAG Planner, Multi-Agent Ensemble, Doc Generation.
+  6. `cat:analysis-integration`: Data Analysis & Charting, REST API Client, Git Version Control.
+- **SQLite Graph Store (`backend/app/memory/graph_store.py`):**
+  - Auto-seeded on application startup with **73 nodes and 95 edges**.
+  - Graph relationships include `CONTAINS`, `CALLS`, `REQUIRES`, and `VERIFIED_BY`.
+  - Frontend renders the graph in both 3D Force-Directed space (`3d-force-graph`) and 2D canvas with category-colored nodes, interactive inspectors, and camera controls.
+
+### 3.4. Project Context & Active Skill Grounding
+- **Project Workspaces (`ProjectSelector.tsx`):**
+  - Users can create isolated project contexts and attach custom skill sets using an interactive, categorized checkbox picker.
+  - "Create & Launch Chat Workspace ➔" creates the project and immediately transitions into the chat interface with that project active.
+- **Active Skills Ribbon (`ChatWorkspace.tsx`):**
+  - Displays configured project skills at the top of the chat view (e.g., `Configured Skills (2): [data-analysis] [api-client] Modify`).
+  - When in Complex Mode, active skills are resolved to tool signatures and descriptions, directly injected into prompt contexts for all ensemble agents.
+
+### 3.5. Abstract Memory Pattern
+- Abstracted behind `MemoryProvider` interface (`backend/app/memory/base.py`) implemented by `SQLiteMemoryProvider`.
+- Memories are segmented into `global`, `project`, and `session` scopes.
+- Tasks submitted with a `project_id` retrieve and summarize context specifically within that project boundary.
+
+### 3.6. Tool Sandbox & Execution Safety
+- Tools are whitelisted, strictly typed Python functions in `backend/app/tools/registry.py`.
+- No unrestricted `exec()` or arbitrary OS command execution is allowed.
+- Argument normalization guards against LLM hallucination of parameter names.
+
+---
+
+## 4. What Has Been Implemented (Phases 1–10)
+
+1. **Phase 1 (Foundation):** FastAPI backend, modular architecture (`api/`, `agents/`, `tools/`), MockLLM, and basic pytest suite.
+2. **Phase 2 (Orchestration):** Planner -> Executor -> Reviewer loop, tool registry, and CLI tracing.
+3. **Phase 3 (Memory & Isolation):** SQLite database creation with `global`, `project`, and `session` scopes, auto-summarization of completed runs.
 4. **Phase 4 (Frontend UI Foundation):** React/Vite dashboard featuring Chat Workspace, Execution Trace, Project Selector, and Memory Explorer.
-5. **Phase 5 (OpenRouter Free Models Integration & One-Click Launch):**
-   - Integrated OpenRouter's Free Models Router (`openrouter/free`) via `https://openrouter.ai/api/v1` using OpenAI SDK.
-   - Dynamic model ID detection (`response.model`) capturing the exact underlying model selected per request.
-   - Resilient JSON schema extraction with retry protection against non-instruct or moderation models.
-   - Enhanced tool argument normalization in `registry.py` and clear parameter documentation in orchestrator prompts.
-   - Built a live test verification suite (`backend/live_tests.py`) covering direct LLM connection, structured planning, tool execution verification, reviewer approval, and SQLite persistence.
-   - Created `start_app.bat` for one-click startup of both backend and frontend servers with automatic browser launch.
-6. **Phase 6 (Stratify UI Redesign & "Open Chat" Brand Overhaul):**
-   - Transformed UI into the modern Stratify dashboard aesthetics using pure zero-dependency CSS tokens.
-   - Built the Bento Dashboard View and Open Chat Mission Control with 4-stage Agent Progress Steppers.
-7. **Phase 7 (AI Context Splitting & Packaging for Kotlin Integration):**
-   - **Smart Splitting:** Built `split_project.py` and `zip_extra.py` to divide the main monorepo into 6 balanced `.zip` packages (under 10MB each) located inside the `parts/` folder. 
-   - **External Modules:** Additionally compressed independent submodules (`MiroFish` and `graphify`) into their own isolated `.zip` files within `parts/`. 
-   - **AI Context Injection:** Embedded global context files (`README.md`, `project.md`, `design.md`) and a `PROJECT_STRUCTURE.txt` manifest into every single zip file so that any AI reading a single part automatically understands the global project architecture.
+5. **Phase 5 (OpenRouter Free Models & Batch Scripts):** Free model routing, live test verification suite (`backend/live_tests.py`), and `start_app.bat`.
+6. **Phase 6 (Stratify UI Redesign):** Complete brand and UI overhaul adhering to Stratify clean card aesthetics, bento dashboards, and micro-animations.
+7. **Phase 7 (AI Context Splitting):** Monorepo chunking via `split_project.py` and `zip_extra.py` into 6 balanced `.zip` packages under 10MB in `parts/`.
 8. **Phase 8 (Memory Graph Integration, Local Inference & Windows Launcher):**
-   - **Local AI Engine:** Integrated backend inference with local **Ollama** running `qwen2.5:3b`.
-   - **Memory Workspace UI:** Implemented a new "Memory Management" workspace containing a real-time **3D Force Graph** representation of all memory nodes, skills, tasks, and dependencies.
-   - **RAG & Provenance:** Built a memory RAG pipeline that pulls EXPLICIT, EXTRACTED, and INFERRED nodes into the execution context.
-   - **Failure Learning:** Implemented logic where failed executions trigger an extraction loop to document the failure as a memory node, which the Planner reviews to avoid repeating mistakes.
-   - **Skill Selection Modal:** Wired a dynamic frontend modal in the Open Chat workspace, allowing users to selectively browse and inject required dependencies and tools into the initial context.
-   - **Realtime SSE:** Connected the backend DAG execution engine to the frontend Memory Workspace via Server-Sent Events (SSE).
-   - **Windows Executable Launcher:** Created `OpenChat.exe` for seamless double-click launching on Windows.
+   - Connected backend to local Ollama running `qwen2.5:3b`.
+   - 3D Force-Directed Memory Graph workspace (`3d-force-graph`).
+   - RAG memory injection and failure learning extraction.
+   - Built standalone Windows executable launcher `OpenChat.exe`.
+9. **Phase 9 (Dual Chat Modes - Simple vs Complex):**
+   - Implemented Simple Mode (`POST /api/v1/chat/simple`) for sub-2-second direct terminal-style Ollama chat responses.
+   - Preserved Complex Mode for deep reasoning, tool execution, and memory updates.
+   - Added interactive mode toggle in Chat Workspace header and quick prompt bar.
+10. **Phase 10 (24-Skill Graph Ecosystem, Interactive Project Skills & Ensemble Grounding):**
+    - Expanded skill library from 18 to 24 skills across 6 categories with complete graph relations (73 nodes, 95 edges).
+    - Built Interactive Skill Capabilities Selector in `ProjectSelector.tsx` with search, category filtering, and direct launch.
+    - Added Active Skills Ribbon in `ChatWorkspace.tsx`.
+    - Integrated skill manifests into ensemble agent prompts (`ensemble.py`) in Complex Mode.
+    - Validated all 36 backend tests and rebuilt `OpenChat.exe`.
+
+---
 
 ## 5. What Went Wrong During Implementation (Gotchas & Fixes)
-When an AI works on this project in the future, watch out for these known issues that we already solved:
 
-1. **OpenRouter Free Pool Routing to Moderation Models**
-   - *The Issue:* `openrouter/free` dynamically routes requests across available free models. Occasionally it routes to a content safety filter (such as `nvidia/nemotron-3.5-content-safety:free`), which outputs `"User Safety: safe"` instead of valid JSON, failing schema validation.
-   - *The Fix:* Implemented a retry loop (up to 3 attempts) in `llm.py`'s `generate_json`. If an incompatible model is returned, it automatically retries with OpenRouter, routing to an instruction-tuned model.
+1. **Chat Latency & Waiting at Memory Stage**
+   - *The Issue:* Users reported chat was hanging/waiting too long at the memory stage when asking simple queries like "Hello" or quick math.
+   - *Why It Happened:* The complex orchestration pipeline sequentially performed memory RAG search, multi-step planning, 3-agent ensemble execution, judge scoring, and memory auto-summarization.
+   - *The Fix:* Implemented dual chat modes. Simple Mode connects straight to Ollama `qwen2.5:3b` without memory search overhead (~1.2s response). Complex Mode is reserved for deep, multi-tool agent tasks.
 
-2. **Windows Console Charmap Encoding (`\u2011`)**
-   - *The Issue:* Modern LLMs often return unicode characters (like non-breaking hyphens `\u2011` or em-dashes). On Windows PowerShell with default `cp1252` encoding, printing LLM feedback threw a `UnicodeEncodeError`.
-   - *The Fix:* Added `sys.stdout.reconfigure(encoding='utf-8', errors='replace')` to guarantee safe console logging.
+2. **Skills Missing from 3D/2D Graph View**
+   - *The Issue:* The memory graph visualization was empty or missing skill nodes on fresh startup.
+   - *Why It Happened:* Skill nodes and relationship edges had to be explicitly seeded into `SQLiteGraphStore`.
+   - *The Fix:* Created `seed_graph(store)` in `backend/app/skills/library.py` and hooked it directly into FastAPI `lifespan` in `app/main.py`. On startup, all 24 skills, 6 workflows, and rules are automatically seeded (73 nodes, 95 edges).
 
 3. **Tool Parameter Name Ambiguity in Small Models**
-   - *The Issue:* Without explicit parameter documentation in the prompt, smaller free models guessed parameter names like `calculation` or `action` instead of `expression` for the calculator tool.
-   - *The Fix:* Added clear tool signatures and example JSON payloads to the orchestrator prompt and added automatic argument normalization in `execute_tool`.
+   - *The Issue:* Smaller models like `qwen2.5:3b` sometimes passed parameters as `calculation` or `action` instead of `expression`.
+   - *The Fix:* Added automatic parameter normalization in `execute_tool()` and clear argument schemas in agent system prompts.
 
-4. **Pytest Offline Mock Isolation**
-   - *The Issue:* Running `pytest` when `.env` was configured with `USE_MOCK_LLM=False` attempted real LLM API calls, failing unit tests if no API key was available in CI/local test runners.
-   - *The Fix:* Patched `app.config.settings.use_mock_llm` to `True` within unit test fixtures in `test_api.py` and `test_workflow.py`, reserving live API calls for `live_tests.py`.
+4. **Windows Console Charmap Encoding (`\u2011`)**
+   - *The Issue:* Printing LLM unicode responses on Windows PowerShell with default `cp1252` encoding threw `UnicodeEncodeError`.
+   - *The Fix:* Added `sys.stdout.reconfigure(encoding='utf-8', errors='replace')` in startup entrypoints.
 
-5. **SQLite File Locking in Pytest (`WinError 32`)**
-   - *The Issue:* The memory tests initially used a physical `test_memory.db` file. During teardown, Windows threw a Permission Error because the SQLite connection remained open/cached, preventing file deletion.
-   - *The Fix:* We migrated the pytest fixtures to use a unique shared in-memory database URI (`file:memdb_...?mode=memory&cache=shared`) and updated the `SQLiteMemoryProvider` to support passing `uri=True` to `sqlite3.connect()`.
+5. **Pytest SQLite File Locking on Windows (`WinError 32`)**
+   - *The Issue:* Physical test databases locked during teardown on Windows.
+   - *The Fix:* Migrated pytest fixtures to unique in-memory shared database URIs (`file:memdb_...?mode=memory&cache=shared`).
 
-6. **TypeScript `noUnusedLocals` / `verbatimModuleSyntax`**
-   - *The Issue:* Strict TypeScript settings in `tsconfig.app.json` cause builds to fail if imports are unused or if type imports are imported as values.
-   - *The Fix:* Strictly prune unused imports across all TSX view files and use `import type { Project, MemoryItem } from './types'`.
+6. **TypeScript Strict Type Imports & Unused Locals**
+   - *The Issue:* Build failed with `TS6133: 'xyz' is declared but its value is never read`.
+   - *The Fix:* Pruned unused imports in TSX views and used explicit `import type` syntax.
 
-7. **Environment File Security (.env in git)**
-   - *The Issue:* The initial repository `.gitignore` omitted `.env`, which could accidentally lead to leaking API keys.
-   - *The Fix:* Updated root `.gitignore` to explicitly ignore `.env`, `*.env`, and `backend/.env`.
-
-8. **Multi-Agent Latency & Free Router Performance**
-   - *The Issue:* Tasks submitted to the agent can take 20–45 seconds before the final result is displayed in the UI. 
-   - *Why It Happens:* The orchestration is a multi-step sequential state machine (Planner -> Executor [Step 1] -> Tool Execution -> Executor [Step 2] -> Reviewer -> Memory Auto-Summary). Each task makes 4 to 5 separate LLM API roundtrips. When using the generic `openrouter/free` router, free-tier upstream providers often have cold-start queueing (5–12s per roundtrip).
-   - *How to Speed It Up:*
-     1. **Target Specific Fast Free Models in `.env`:** Specify high-throughput free models directly:
-        - `OPENROUTER_MODEL=meta-llama/llama-3.3-70b-instruct:free`
-        - `OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free`
-        - `OPENROUTER_MODEL=mistralai/mistral-7b-instruct:free`
-     2. **Use Direct Gemini Provider:** Setting `USE_MOCK_LLM=False` with `GEMINI_API_KEY` and `GEMINI_MODEL=gemini-3.8-flash` processes each agent step in ~600–900ms.
-     3. **Frontend Multi-Stage Progress Stepper:** Visual stage transitions in `ChatWorkspace.tsx` (`Planning ⏳` ➔ `Executing ⚙️` ➔ `Reviewing 🔍` ➔ `Memory 💾`) provide immediate animated feedback and eliminate perceived wait times.
+---
 
 ## 6. How to Run the Platform
 
-### Step 1: Start Local AI Engine
-Because the platform's reasoning engine runs entirely offline on your machine, you must install [Ollama](https://ollama.com/) and download the specific model used for logic execution:
-1. Ensure Ollama is running.
-2. Run `ollama run qwen2.5:3b` in your terminal.
-3. Once downloaded, the backend can automatically connect to it via `http://localhost:11434`.
+### Step 1: Start Local Ollama AI Engine
+Ensure Ollama is installed and running with `qwen2.5:3b`:
+```powershell
+ollama run qwen2.5:3b
+```
+The backend automatically connects to Ollama at `http://127.0.0.1:11434`.
 
 ### Step 2: Launch Platform
-- **Option A (One-Click Windows EXE - Recommended):** Double-click `OpenChat.exe` in the root folder. This automatically starts the backend API, serves the production frontend, checks Ollama, and opens your browser without any terminal windows!
-- **Option B (One-Click Batch Script):** Double-click or run `start_app.bat`. This automatically starts the backend API, the React Vite server, and opens your browser in terminal windows.
-- **Option C (Terminal Commands):**
+- **Option A (One-Click Windows EXE - Recommended):** Double-click `OpenChat.exe` in the root folder. It starts the backend API, frontend server, checks Ollama, and opens your browser.
+- **Option B (Batch Script):** Run `start_app.bat`.
+- **Option C (Manual Terminal):**
   1. Backend:
      ```powershell
      cd backend
@@ -122,12 +157,9 @@ Because the platform's reasoning engine runs entirely offline on your machine, y
      ```
   3. Open `http://localhost:5173` in your browser.
 
-## 7. UI/UX & Frontend Design System
-The design specification and UX blueprint are documented in [design.md](./design.md), and the visual design reference template is located in `stitch_stratify_ai_dashboard_ui/code.html`.
+---
 
-For live free-model answers, set `USE_MOCK_LLM=False` and `OPENROUTER_API_KEY` in `backend/.env`. Without that configuration, the app starts in mock mode so the site remains available offline.
-
-## 8. Future Roadmap (Not Yet Implemented)
-- **Vector RAG:** Swapping/extending SQLite with Chroma/Qdrant for semantic search over ingested documents.
-- **n8n Webhooks:** Allowing the Executor to call n8n webhooks as "tools", and allowing n8n to trigger the FastAPI endpoints.
-- **Human-in-the-Loop:** Pausing the execution loop in the backend to wait for human approval via the React UI before executing sensitive tools.
+## 7. Verification & Testing
+- **Backend Unit Tests:** Run `pytest backend/tests` (36 tests covering API, E2E engine, ensemble, memory, mock validation, web search, and workflows).
+- **Frontend Build:** Run `npm run build` in `frontend/` (TypeScript verification & Vite production build).
+- **Live Tests:** Run `python backend/live_tests.py` for end-to-end Ollama/OpenRouter verification.

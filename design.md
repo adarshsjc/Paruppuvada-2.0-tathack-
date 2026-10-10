@@ -1,92 +1,91 @@
 # Autonomous AI Agent Platform - Interface Design System & UX Blueprint (`design.md`)
 
-> **Version:** 2.1  
-> **Target:** Frontend UI/UX Overhaul & Modernization  
-> **Tech Stack:** React 19, TypeScript, Vite, Modern Vanilla CSS (Tokens, Grid, Glassmorphism, CSS Variables)
-> **Distribution:** Codebase is optimized and chunked for LLM ingestion via `parts/` architecture.
+> **Version:** 3.0  
+> **Brand & Design Language:** Stratify Clean Workspace & Mission Control  
+> **Tech Stack:** React 19, TypeScript, Vite, Modern Vanilla CSS (Stratify Tokens, Flex/Grid, Glass Panels, CSS Variables)  
+> **Primary Provider:** Local Ollama (`qwen2.5:3b`)
 
 ---
 
 ## 1. Executive Design Vision
 
-The Autonomous AI Agent interface should feel like a **Mission Control Cyber-Deck**: state-of-the-art, hyper-responsive, and visually stunning. It bridges the gap between deep technical transparency (inspecting multi-agent thoughts, execution loops, and database mutations) and effortless user experience.
+Open Chat is designed around the **Stratify** visual design system: modern, airy, hyper-functional, and aesthetically pristine. It balances immediate chat responsiveness with deep technical observability into multi-agent decision making, memory nodes, and execution graphs.
 
 ### Core Design Pillars
-1. **Instant Perceived Performance:** Multi-agent workflows make multiple sequential LLM calls. The UI must eliminate perceived waiting times through dynamic multi-stage progress steppers, skeleton pulses, and real-time state visualizers.
-2. **Obsidian Glassmorphism:** Deep dark canvas (`#090d16` / `#0f172a`), translucent glass panels with `backdrop-filter: blur(16px)`, radial ambient glow accents, and subtle borders (`rgba(255, 255, 255, 0.08)`).
-3. **Structured Visual Hierarchy:** Clear separation between **Chat / Mission Input** (left) and **Real-Time Execution Trace DAG / Inspector** (right), with collapsible sidebars and context headers.
-4. **Zero-Dependency Modern CSS:** High-performance, native CSS variables and animations without heavy CSS frameworks, ensuring instant load times and pixel-perfect responsiveness.
-5. **Interactive 3D Data Visualization:** Real-time 3D Force-Directed Graphs mapping agent memories, skills, and execution traces with dynamic illumination.
+1. **Dual Chat Response Dynamics:**
+   - **Simple Mode:** Instant terminal-style responses (~1–2s) powered directly by local Ollama `qwen2.5:3b` without memory search or multi-agent delays.
+   - **Complex Mode:** Multi-agent ensemble deliberation (Planner -> 3 Parallel Solvers -> Judge -> Reviewer -> Memory RAG & Reflection) with real-time DAG trace updates.
+2. **Stratify Light Canvas Aesthetics:** Clean `#f8fafc` canvas, bright white cards (`#ffffff`), soft floating drop shadows (`0 4px 20px rgba(0, 0, 0, 0.05)`), rounded pill badges, and vibrant cobalt blue accents (`#2563eb`).
+3. **Interactive Skill Capabilities Orchestration:** Projects can be configured with modular skills selected from a rich 24-skill library. The interface provides real-time skill category filtering, quick search, selection counters, and an **Active Configured Skills Ribbon** in the chat workspace.
+4. **Living 3D Force-Directed Skill & Memory Graph:** Immersive 3D visualization mapping skills, workflows, tools, and memory extractions as interconnected celestial nodes with category-coded colors and real-time inspection.
+5. **Zero-Dependency Native CSS:** Ultra-fast rendering using native CSS variables and animations, eliminating bulky CSS frameworks for instant load times and pixel-perfect layouts.
 
 ---
 
 ## 2. Design System & CSS Tokens Specification
 
-Below is the design token blueprint to be defined in `frontend/src/index.css`:
+The core design tokens powering Open Chat:
 
 ```css
 :root {
-  /* Canvas & Surfaces */
-  --bg-canvas: #090d16;
-  --bg-surface: #0f172a;
-  --bg-surface-elevated: #1e293b;
-  --bg-glass: rgba(15, 23, 42, 0.72);
-  --bg-glass-card: rgba(30, 41, 59, 0.55);
-  --bg-glass-input: rgba(15, 23, 42, 0.6);
+  /* Canvas & Surface Colors */
+  --bg-app: #f4f6fa;
+  --bg-surface: #ffffff;
+  --bg-surface-subtle: #f8fafc;
+  --bg-surface-elevated: #ffffff;
+  --bg-glass-card: rgba(255, 255, 255, 0.85);
 
   /* Borders & Dividers */
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-medium: rgba(255, 255, 255, 0.12);
-  --border-accent: rgba(6, 182, 212, 0.35);
+  --border-subtle: #e2e8f0;
+  --border-medium: #cbd5e1;
+  --border-accent: rgba(37, 99, 235, 0.35);
 
-  /* Primary Brand & Accents */
-  --accent-cyan: #06b6d4;
-  --accent-cyan-glow: rgba(6, 182, 212, 0.25);
-  --accent-indigo: #6366f1;
-  --accent-gradient: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
-  --accent-gradient-hover: linear-gradient(135deg, #22d3ee 0%, #818cf8 100%);
+  /* Primary Brand & Gradients */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: #eff6ff;
+  --gradient-primary: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  --gradient-accent: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
 
-  /* Semantic Status Colors */
+  /* Skill & Status Semantics */
   --status-success: #10b981;
-  --status-success-bg: rgba(16, 185, 129, 0.12);
-  --status-success-border: rgba(16, 185, 129, 0.3);
+  --status-success-bg: #ecfdf5;
+  --status-success-border: #a7f3d0;
 
   --status-warning: #f59e0b;
-  --status-warning-bg: rgba(245, 158, 11, 0.12);
-  --status-warning-border: rgba(245, 158, 11, 0.3);
+  --status-warning-bg: #fffbeb;
+  --status-warning-border: #fde68a;
 
   --status-error: #ef4444;
-  --status-error-bg: rgba(239, 68, 68, 0.12);
-  --status-error-border: rgba(239, 68, 68, 0.3);
+  --status-error-bg: #fef2f2;
+  --status-error-border: #fecaca;
 
-  --status-info: #3b82f6;
-  --status-info-bg: rgba(59, 130, 246, 0.12);
+  --status-simple: #f59e0b;
+  --status-complex: #8b5cf6;
 
-  /* Typography Colors */
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --text-code: #38bdf8;
+  /* Typography Scale & Palette */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-code: #0284c7;
 
-  /* Typography Scale */
-  --font-family-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
   --font-family-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
 
-  /* Elevation & Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px var(--accent-cyan-glow);
+  /* Shadows & Elevation */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.09);
+  --shadow-primary-glow: 0 4px 14px rgba(37, 99, 235, 0.25);
 
-  /* Radii */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  /* Border Radii */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
   --radius-full: 9999px;
-
-  /* Transitions */
-  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 ```
 
@@ -95,94 +94,96 @@ Below is the design token blueprint to be defined in `frontend/src/index.css`:
 ## 3. UI Layout Architecture & Wireframe
 
 ```
-+-----------------------------------------------------------------------------------------+
-| [LOGO] Antigravity AI  |  Project: [ Alpha Proj v ]  | [⚡ openrouter/free | 1.2s ] [Settings]|
-+-----------------------------------------------------------------------------------------+
-| [NAV SIDEBAR] |                        MAIN WORKSPACE (SPLIT 50/50)                     |
-|               |                                                                         |
-| 💬 Workspace  | +-----------------------------------+ +--------------------------------+ |
-| 📁 Projects   | | 🤖 MISSION CONTROL (Chat)         | | ⚡ EXECUTION TRACE & DAG       | |
-| 🧠 Memory     | |-----------------------------------| |--------------------------------| |
-| 🌐 Mem Mgmt   | | [User Msg]: Calculate 347 * 829   | | [● PLANNER] Step 1 of 1        | |
-| 📜 History    | | [User Msg]: Calculate 347 * 829   | | [● PLANNER] Step 1 of 1        | |
-| ⚙️ Settings   | |                                   | | ├─ Goal: Compute product       | |
-|               | | [Agent]: [ ⏳ Processing... ]     | | └─ Expected: 287663            | |
-|               | |   ┌─ Multi-Stage Stepper ──────┐  | |                                | |
-|               | |   │ ✓ Plan  » ⚙️ Calc  » 🔍 Rev│  | | [● EXECUTOR] Action 1          | |
-|               | |   └────────────────────────────┘  | | ├─ Tool: calculator            | |
-|               | |                                   | | ├─ Input: {"expr": "347*829"}  | |
-|               | | [Final Result Bubble]:            | | └─ Result: 287663 [COPY]       | |
-|               | | "The product of 347 * 829 is      | |                                | |
-|               | |  287,663..."                      | | [● REVIEWER] Approved (100%)   | |
-|               | |-----------------------------------| | └─ Verification: Verified math | |
-|               | | [ > Prompt Input Area...    [SEND]| +--------------------------------+ |
-|               | +-----------------------------------+                                    |
-+-----------------------------------------------------------------------------------------+
++------------------------------------------------------------------------------------------------------------------------+
+| [⚡ Open Chat AI] |  DESK APP  [OPEN CHAT]  ● AUTONOMOUS  |  PROJECT: [ FinTech Analytics ]  |  PROVIDER: OLLAMA LOCAL (qwen2.5:3b) |
++------------------------------------------------------------------------------------------------------------------------+
+| [NAV SIDEBAR]    |                                   MAIN WORKSPACE AREA (SPLIT LAYOUT)                                |
+|                  |                                                                                                     |
+| 👤 Sam Smith     | +---------------------------------------------------+ +---------------------------------------------+ |
+|   UX Lead        | | 💬 OPEN CHAT WORKSPACE                            | | ⚡ EXECUTION TRACE & DAG                    | |
+|   ● FinTech Act. | | Context: Project 1bdd2cfd...                      | |---------------------------------------------| |
+|                  | | [Mode: Simple ⚡ | Complex 🧠]  [🌿 2 Skills]     | | [● AUTONOMOUS PLANNER]                      | |
+| 🪟 Dashboard     | |---------------------------------------------------| | Goal: Compute financial metrics             | |
+| 💬 Open Chat     | | 🌿 Configured Skills (2): [data-analysis] [api]   | |                                             | |
+| 📁 Projects      | |---------------------------------------------------| | [● AGENT 1 · DIRECT SOLVER] [SELECTED]      | |
+| 🧠 Memory Vault  | | [User Msg]: Analyze financial metrics using API   | | Model: qwen2.5:3b                           | |
+| 📜 Audit Log     | |                                                   | | 1. Use REST API Client skill to query...    | |
+| 🌐 3D Skill Graph| | [Open Chat] 🧠 Complex                     08:48  | | 2. Use Data Analysis skill to compute...    | |
+|                  | | Solution generated using 2 configured skills...   | |                                             | |
+| ● API Online     | | [ID: 5a962214... Inspect Trace DAG]               | | [● AGENT 2 · CRITICAL THINKER]              | |
+|   Ollama 3 agents| |---------------------------------------------------| | Validates security and schema compliance    | |
+|                  | | [⚡ 25 * 4]  [🧠 Save Note]  [🔍 Search Memory]   | |                                             | |
+| ⚙️ Settings      | | [Mode: ⚡ Simple (Fast) | 🧠 Complex (Agent)]      | | [● VERIFICATION & REVIEW]                   | |
+|                  | | [ Ask Open Chat...                        [SEND] ]| | Score: 0.94 Approved                        | |
+|                  | +---------------------------------------------------+ +---------------------------------------------+ |
++------------------------------------------------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 4. Key UI Components & Redesign Blueprint
+## 4. Key View Modules & Component Blueprints
 
-### 4.1. Real-Time Multi-Stage Agent Stepper (`AgentProgressStepper.tsx`)
-**Problem:** Sequential LLM calls create a 20–40s quiet period where users wonder if the app is stuck.  
-**Solution:** Visual progress stepper animating through the state machine:
-```
-[ 1. Planning ⏱️ ] ───> [ 2. Tool Execution ⚙️ ] ───> [ 3. Reviewer Verification 🔍 ] ───> [ 4. Memory Persistence 💾 ]
-```
-- **Active Step Pulse:** Glow pulse on the currently executing agent role.
-- **Estimated Duration / Elapsed Counter:** Micro-timer showing `Elapsed: 4.2s`.
-- **Model Tag Badge:** Displays the underlying model assigned by OpenRouter (`poolside/laguna-xs-2.1:free`, etc.).
+### 4.1. Dual-Mode Chat Workspace (`ChatWorkspace.tsx`)
+- **Mode Toggle Bar:**
+  - `⚡ Simple (Fast Qwen 2.5)`: Direct terminal response bypassing memory and ensemble delays.
+  - `🧠 Complex (Agent + Memory)`: Deep reasoning using SQLite memory RAG, 3-agent ensemble, and DAG execution.
+- **Configured Skills Ribbon:**
+  - Located directly below the chat header.
+  - Displays tags for all attached skills (`data-analysis`, `api-client`, etc.) with a "Modify" quick-link.
+- **Message Cards & Badges:**
+  - Clear user message cards and AI assistant responses labeled with active mode tags (`⚡ Simple` or `🧠 Complex`).
+  - Markdown code formatting with copy action.
+  - "Inspect Trace DAG" link jumping directly to the execution trace.
 
-### 4.2. Enhanced Chat Workspace (`ChatWorkspace.tsx`)
-- **Interactive Quick-Action Pills:** Preset buttons for rapid testing:
-  - `⚡ Calculate 347 * 829`
-  - `📝 Save Project Note`
-  - `🔍 Search Architecture Memory`
-- **Markdown & Code Highlighting:** Automatic formatting for lists, math equations, code snippets, and bold text.
-- **Copy-to-Clipboard Actions:** One-click copy icon for answers and calculation results.
-- **Agent Avatar & Latency Tag:** Shows the exact time taken for each completed run (`Completed in 14.8s`).
+### 4.2. Interactive Project & Skill Capabilities Selector (`ProjectSelector.tsx`)
+- **Project Setup Header:** Input field for project naming and brief overview.
+- **Skill Capabilities Selector:**
+  - **Category Filter Pills:** `All Categories`, `Core Utilities`, `Knowledge & Memory`, `Web Research`, `Verification & Quality`, `Architecture & Synthesis`, `Analysis & Integration`.
+  - **Live Search Input:** Debounced search filtering skills across name and description.
+  - **Selection Counters:** Live counter showing selected skills count.
+  - **Skill Cards Grid:**
+    - Custom styled checkboxes with hover glow.
+    - Skill title and category tag.
+    - 2-line clamped capability description.
+    - Allowed tool badges (e.g. `python-calc`, `curl`, `git`).
+    - Prerequisite requirement tags.
+- **Dual Action Bar:**
+  - `Create Project Only`: Saves project without navigating away.
+  - `Create & Launch Chat Workspace ➔`: Primary action creating the project, saving the selected skills to memory, and immediately opening the Chat Workspace with the new project active.
 
-### 4.3. Interactive Execution Trace Inspector (`ExecutionInspector.tsx`)
-- **Collapsible Step Cards:** Accordion-style cards for each iteration with status icons:
-  - `Planner Step`: Goal & Expected Output card.
-  - `Executor Action`: Thought bubble + Tool tag (`calculator`, `save_memory`, `search_memory`).
-  - `Tool Result Payload`: Syntax-highlighted output with copy button.
-  - `Reviewer Verdict`: Green/Red badge with feedback explanation.
-- **Raw JSON Drawer:** Toggle button to inspect the full raw `TaskState` payload for debugging.
+### 4.3. 3D Force-Directed Skill & Memory Graph (`MemoryWorkspace.tsx`)
+- **3D Celestial Space:**
+  - Built with `3d-force-graph` and HTML5 Canvas fallback.
+  - Nodes auto-colored by category:
+    - Core Utilities: Cyan (`#06b6d4`)
+    - Knowledge & Memory: Purple (`#8b5cf6`)
+    - Web Research: Blue (`#2563eb`)
+    - Verification & Quality: Emerald (`#10b981`)
+    - Architecture & Synthesis: Amber (`#f59e0b`)
+    - Analysis & Integration: Indigo (`#6366f1`)
+- **Controls & Interaction:**
+  - Reset Camera, Fit to View, and 2D/3D Mode toggle.
+  - Click-to-inspect sidebar revealing node ID, category, connected edges (`CONTAINS`, `CALLS`, `REQUIRES`, `VERIFIED_BY`), and metadata.
 
-### 4.4. Memory Vault & Graph Explorer (`MemoryExplorer.tsx`)
-- **Card Grid Layout:** Categorized cards by `[Global]`, `[Project]`, and `[Session]`.
-- **Live Search with Debounce:** Instant search filtering as you type.
-- **Interactive Tag Cloud:** Clickable tag pills to filter notes by `#math`, `#architecture`, `#notes`.
-- **"Add Knowledge" Modal:** Floating glass modal to create new persistent memories without running a chat task.
-
-### 4.5. Latency & Model Settings Hub (`Settings.tsx`)
-- **Interactive Model Selector:** Quick-switch between Ollama, OpenRouter, and Mock modes.
-- **Live Latency Ping Test:** Button to test API connection time and measure roundtrip ping.
-
-### 4.6. 3D Memory Graph Workspace (`MemoryWorkspace.tsx` - Phase 8)
-- **3D Force-Directed Visualization:** Renders tasks, skills, and memory extractions as a living 3D constellation.
-- **Real-time Illumination:** Server-Sent Events (SSE) pulse nodes to highlight the agent's thought process in real-time.
-- **Skill Selection Modal:** Pre-select required dependencies and tools before launching an Open Chat session.
+### 4.4. Real-Time Execution Trace & DAG Inspector (`ExecutionInspector.tsx`)
+- **Autonomous Planner Card:** Displays goal, steps count, and expected output.
+- **Tool Iterations Accordion:** Step-by-step display of executor actions and payloads.
+- **Parallel Agent Ensemble (3 Solvers):**
+  - Direct Solver card.
+  - Critical Thinker review card.
+  - Research Synthesizer card.
+  - Green "Selected" badge indicating the winning solution chosen by the Judge.
 
 ---
 
-## 5. Micro-Animations & CSS Keyframes
+## 5. Micro-Animations & Interaction Polish
 
 ```css
-/* Ambient Shimmer for Loading States */
-@keyframes shimmerPulse {
-  0% { opacity: 0.6; transform: scale(0.99); }
-  50% { opacity: 1; transform: scale(1); box-shadow: 0 0 25px var(--accent-cyan-glow); }
-  100% { opacity: 0.6; transform: scale(0.99); }
-}
-
-/* Slide and Fade-In for New Messages and Cards */
+/* Card Entrance Animation */
 @keyframes cardEntrance {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.98);
+    transform: translateY(8px) scale(0.99);
   }
   to {
     opacity: 1;
@@ -190,40 +191,26 @@ Below is the design token blueprint to be defined in `frontend/src/index.css`:
   }
 }
 
-/* Glowing Border Sweep */
-@keyframes borderGlowSweep {
-  0% { border-color: rgba(6, 182, 212, 0.2); }
-  50% { border-color: rgba(99, 102, 241, 0.6); }
-  100% { border-color: rgba(6, 182, 212, 0.2); }
+/* Pulse on Selected Skill Cards */
+@keyframes skillSelectedPulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-.step-active {
-  animation: shimmerPulse 2s infinite ease-in-out;
-  border-color: var(--accent-cyan) !important;
-}
-
-.task-card {
-  animation: cardEntrance 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* Fast Simple Mode Glow */
+@keyframes lightningPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 ```
 
 ---
 
-## 6. Implementation Stages & Action Plan
+## 6. Guidelines for Future UI Modifications
 
-| Stage | Focus Area | Deliverables |
-| :--- | :--- | :--- |
-| **Stage 1** | **Design Token Foundation** | Update `index.css` with CSS variables, typography imports, scrollbar stylings, and glass utility classes. |
-| **Stage 2** | **Navigation & Header Bar** | Implement top navigation bar with active project pill, latency status, and model selector dropdown. |
-| **Stage 3** | **Mission Control Chat** | Upgrade `ChatWorkspace.tsx` with multi-stage progress stepper, preset query pills, and markdown formatting. |
-| **Stage 4** | **Execution Trace DAG** | Build collapsible trace cards, tool payload inspector, and reviewer scorecard. |
-| **Stage 5** | **Memory Vault Overhaul** | Redesign `MemoryExplorer.tsx` with card grid, tag filters, and knowledge creation modal. |
-| **Stage 6** | **Settings & Latency Hub** | Build model switcher and live latency tester in `Settings.tsx`. |
-
----
-
-## 7. How to Use this Document
-Whenever preparing a UI/UX update or asking an AI assistant to enhance the visual design:
-1. Refer to the tokens in **Section 2** for color and spacing consistency.
-2. Follow the component specifications in **Section 4**.
-3. Use the implementation stages in **Section 6** for incremental, bug-free rollouts.
+1. **Maintain Dual-Mode Clarity:** Always keep Simple and Complex modes clearly separated visually and logically.
+2. **Preserve Stratify Design Hierarchy:** Use defined variables from `--bg-surface`, `--color-primary`, and `--border-subtle` rather than arbitrary inline hex values.
+3. **Keep Interactive Elements Responsive:** Ensure all buttons, toggles, and cards feature distinct hover and active states.
+4. **Strict TypeScript Imports:** Maintain `import type` syntax to satisfy strict build requirements.
