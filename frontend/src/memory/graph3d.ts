@@ -288,6 +288,32 @@ export class Graph3D {
     this.requestRender();
   }
 
+  zoomIn() {
+    this.zoomBy(0.82);
+  }
+
+  zoomOut() {
+    this.zoomBy(1.22);
+  }
+
+  resetOrbit() {
+    this.state.cam.yaw = 0.6;
+    this.state.cam.pitch = 0.42;
+    this.state.cam.dist = 260;
+    this.state.cam.pan = { x: 0, y: 0, z: 0 };
+    this.requestRender();
+  }
+
+  toggleLabels(): boolean {
+    this.state.showLabels = !this.state.showLabels;
+    this.requestRender();
+    return this.state.showLabels;
+  }
+
+  getShowLabels(): boolean {
+    return this.state.showLabels;
+  }
+
   fitToView() {
     let maxY = 0;
     for (const ln of this.state.nodes.values()) {
@@ -366,13 +392,68 @@ export class Graph3D {
     const { ctx } = this;
     const st = this.state;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    // deep-space viewport inside the light Stratify shell
-    const g = ctx.createRadialGradient(this.width / 2, this.height / 2, 40,
-      this.width / 2, this.height / 2, Math.max(this.width, this.height) * 0.75);
-    g.addColorStop(0, '#101a30');
-    g.addColorStop(1, '#090d16');
+
+    // Deep futuristic cyber-space backdrop with layered vignette
+    const g = ctx.createRadialGradient(
+      this.width / 2, this.height / 2, 20,
+      this.width / 2, this.height / 2, Math.max(this.width, this.height) * 0.72
+    );
+    g.addColorStop(0, '#0e172a');
+    g.addColorStop(0.45, '#090e1c');
+    g.addColorStop(1, '#040711');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, this.width, this.height);
+
+    // Subtle celestial starfield (deterministic, no flicker)
+    ctx.save();
+    for (let i = 0; i < 70; i++) {
+      const sx = ((Math.sin(i * 127.1) * 43758.5453) % 1 + 1) % 1 * this.width;
+      const sy = ((Math.cos(i * 269.5) * 43758.5453) % 1 + 1) % 1 * this.height;
+      const sa = 0.12 + ((i % 5) * 0.08);
+      const sr = 0.7 + (i % 3) * 0.5;
+      ctx.fillStyle = `rgba(186, 230, 253, ${sa})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // 3D Ground Perspective Horizon Grid (y = -45)
+    ctx.save();
+    const groundY = -45;
+    const drawGroundRing = (r: number, color: string, dash: number[] = []) => {
+      ctx.beginPath();
+      const segments = 56;
+      for (let i = 0; i <= segments; i++) {
+        const th = (i / segments) * Math.PI * 2;
+        const pt = this.project({ x: r * Math.cos(th), y: groundY, z: r * Math.sin(th) });
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.setLineDash(dash);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    };
+
+    // Concentric perspective rings
+    drawGroundRing(160, 'rgba(56, 189, 248, 0.08)');
+    drawGroundRing(105, 'rgba(99, 102, 241, 0.14)', [4, 6]);
+    drawGroundRing(55, 'rgba(56, 189, 248, 0.18)');
+
+    // Ground axes
+    const pX1 = this.project({ x: -160, y: groundY, z: 0 });
+    const pX2 = this.project({ x: 160, y: groundY, z: 0 });
+    const pZ1 = this.project({ x: 0, y: groundY, z: -160 });
+    const pZ2 = this.project({ x: 0, y: groundY, z: 160 });
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath(); ctx.moveTo(pX1.x, pX1.y); ctx.lineTo(pX2.x, pX2.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pZ1.x, pZ1.y); ctx.lineTo(pZ2.x, pZ2.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
 
     const now = performance.now();
     // expire pulses
@@ -400,23 +481,37 @@ export class Graph3D {
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
       ctx.lineTo(b.x, b.y);
+
       if (puls || onPath) {
-        ctx.strokeStyle = puls ? puls.color : '#38bdf8';
-        ctx.globalAlpha = puls ? 0.95 : 0.8;
-        ctx.lineWidth = puls ? 2.4 : 1.8;
+        ctx.strokeStyle = puls ? puls.color : '#a78bfa';
+        ctx.shadowColor = puls ? puls.color : '#a78bfa';
+        ctx.shadowBlur = 10;
+        ctx.globalAlpha = puls ? 0.98 : 0.88;
+        ctx.lineWidth = puls ? 2.6 : 2.0;
       } else if (isSel) {
-        ctx.strokeStyle = '#93c5fd';
-        ctx.globalAlpha = 0.85;
-        ctx.lineWidth = 1.4;
+        ctx.strokeStyle = '#38bdf8';
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 8;
+        ctx.globalAlpha = 0.9;
+        ctx.lineWidth = 1.6;
       } else {
+        ctx.shadowBlur = 0;
         const inferred = e.provenance === 'INFERRED';
-        ctx.strokeStyle = inferred ? 'rgba(148,163,184,0.5)' : 'rgba(148,163,184,0.8)';
-        ctx.globalAlpha = 0.28;
-        ctx.lineWidth = 1;
+        // Palette tint by relationship type
+        let edgeColor = 'rgba(148, 163, 184, 0.45)';
+        if (e.edge_type === 'REQUIRES') edgeColor = 'rgba(167, 139, 250, 0.55)';
+        else if (e.edge_type === 'CONTAINS') edgeColor = 'rgba(56, 189, 248, 0.45)';
+        else if (e.edge_type === 'BELONGS_TO') edgeColor = 'rgba(96, 165, 250, 0.45)';
+        else if (e.edge_type === 'CALLS' || e.edge_type === 'USES_SKILL') edgeColor = 'rgba(52, 211, 153, 0.55)';
+
+        ctx.strokeStyle = edgeColor;
+        ctx.globalAlpha = inferred ? 0.28 : 0.48;
+        ctx.lineWidth = 1.1;
         ctx.setLineDash(inferred ? [4, 4] : []);
       }
       ctx.stroke();
       ctx.setLineDash([]);
+      ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
     }
 
@@ -434,62 +529,93 @@ export class Graph3D {
       // pulse halo (event illumination)
       if (puls) {
         const t = (now - puls.t0) / PULSE_MS;
-        const rr = r + 4 + t * 26;
+        const rr = r + 4 + t * 28;
         ctx.beginPath();
         ctx.arc(cx, cy, rr, 0, Math.PI * 2);
         ctx.strokeStyle = puls.color;
-        ctx.globalAlpha = Math.max(0, 0.85 * (1 - t));
-        ctx.lineWidth = 2;
+        ctx.shadowColor = puls.color;
+        ctx.shadowBlur = 16;
+        ctx.globalAlpha = Math.max(0, 0.88 * (1 - t));
+        ctx.lineWidth = 2.2;
         ctx.stroke();
+        ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
       }
 
-      // body
+      // Neon node body fill with bloom
+      ctx.save();
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      const grad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
-      grad.addColorStop(0, lighten(color, 0.35));
-      grad.addColorStop(1, color);
+      const grad = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.1, cx, cy, r);
+      grad.addColorStop(0, lighten(color, 0.45));
+      grad.addColorStop(0.7, color);
+      grad.addColorStop(1, lighten(color, -0.2));
       ctx.fillStyle = grad;
-      ctx.globalAlpha = dimmed ? 0.15 : 1;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = isSel ? 22 : isHover ? 16 : (n.child_count > 0 ? 12 : 7);
+      ctx.globalAlpha = dimmed ? 0.14 : 1;
       ctx.fill();
+
       if (n.compression_state === 'ARCHIVED') {
-        ctx.globalAlpha = dimmed ? 0.12 : 0.5;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
         ctx.fill();
       }
-      ctx.globalAlpha = 1;
+      ctx.restore();
 
-      // rings: selection / hover / compressed group
+      // Rings: selection / hover / compressed group
       if (isSel || isHover || onPath) {
         ctx.beginPath();
-        ctx.arc(cx, cy, r + (isSel ? 4.5 : 3), 0, Math.PI * 2);
-        ctx.strokeStyle = isSel ? '#38bdf8' : onPath ? '#a78bfa' : 'rgba(56,189,248,0.6)';
-        ctx.lineWidth = isSel ? 2 : 1.2;
+        ctx.arc(cx, cy, r + (isSel ? 5.5 : 3.5), 0, Math.PI * 2);
+        ctx.strokeStyle = isSel ? '#38bdf8' : onPath ? '#c084fc' : 'rgba(56, 189, 248, 0.7)';
+        ctx.lineWidth = isSel ? 2.4 : 1.4;
+        ctx.shadowColor = isSel ? '#38bdf8' : '#c084fc';
+        ctx.shadowBlur = isSel ? 14 : 8;
         ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Extra targeting outer reticle for selected
+        if (isSel) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, r + 9, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
       }
+
+      // Planetary orbital ring for cluster roots
       if (n.child_count > 0) {
         ctx.beginPath();
-        ctx.arc(cx, cy, r + 2.5, -Math.PI / 3, Math.PI / 3);
-        ctx.strokeStyle = 'rgba(226,232,240,0.85)';
-        ctx.lineWidth = 1.4;
+        ctx.arc(cx, cy, r + 3.2, -Math.PI / 2.5, Math.PI / 2.5);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = 1.6;
         ctx.stroke();
       }
 
-      // labels
+      // Labels: Sleek frosted glass badges with category border
       if (st.showLabels && (r > 3.4 || isSel || isHover || puls)) {
         const label = n.child_count > 0 ? `${n.label} (${n.child_count})` : n.label;
         const fs = Math.max(10, Math.min(13, r + 6));
-        ctx.font = `${isSel ? 600 : 400} ${fs}px 'Inter', system-ui, sans-serif`;
+        ctx.font = `${isSel ? 600 : 500} ${fs}px 'Inter', system-ui, sans-serif`;
         ctx.textAlign = 'center';
-        const ty = cy + r + fs + 2;
+        const ty = cy + r + fs + 4;
         const w = ctx.measureText(label).width;
-        ctx.fillStyle = 'rgba(9,13,22,0.55)';
+
+        ctx.save();
         if (dimmed) ctx.globalAlpha = 0.2;
-        roundRect(ctx, cx - w / 2 - 4, ty - fs + 1, w + 8, fs + 4, 4);
+        // Background badge
+        ctx.fillStyle = isSel ? 'rgba(15, 23, 42, 0.92)' : 'rgba(11, 18, 33, 0.78)';
+        ctx.strokeStyle = isSel ? '#38bdf8' : `rgba(${parseInt(color.slice(1,3),16)}, ${parseInt(color.slice(3,5),16)}, ${parseInt(color.slice(5,7),16)}, 0.4)`;
+        ctx.lineWidth = 1;
+        roundRect(ctx, cx - w / 2 - 6, ty - fs + 1, w + 12, fs + 6, 5);
         ctx.fill();
-        ctx.fillStyle = dimmed ? 'rgba(148,163,184,0.4)' : isSel ? '#e0f2fe' : '#cbd5e1';
-        ctx.fillText(label, cx, ty + 2);
-        ctx.globalAlpha = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = dimmed ? 'rgba(148, 163, 184, 0.4)' : isSel ? '#ffffff' : '#e2e8f0';
+        ctx.fillText(label, cx, ty + 3);
+        ctx.restore();
       }
     }
   }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Send, 
   Loader2, 
@@ -14,11 +14,14 @@ import {
   BrainCircuit, 
   CheckCircle2,
   Trash2,
-  Zap
+  Zap,
+  Compass
 } from 'lucide-react';
 import { submitTask } from '../api';
 import type { TaskState } from '../types';
 import SkillSelectorModal from '../components/SkillSelectorModal';
+import ProjectGraphPanel from './memory/ProjectGraphPanel';
+import { fetchGraphAccess } from '../memory/api';
 
 interface Message {
   role: 'user' | 'agent';
@@ -57,15 +60,43 @@ export default function ChatWorkspace({
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showRawJsonModal, setShowRawJsonModal] = useState(false);
   const [selectedTraceState, setSelectedTraceState] = useState<TaskState | null>(null);
+  const [rightPanelTab, setRightPanelTab] = useState<'trace' | 'graph'>('trace');
+  const [isGraphAccessEnabled, setIsGraphAccessEnabled] = useState(false);
   
   const [currentSkills, setCurrentSkills] = useState<string[]>(selectedSkills || []);
   const [isSkillModalOpen, setIsSkillModalOpen] = useState(false);
+
+  useEffect(() => {
+    fetchGraphAccess().then((res) => setIsGraphAccessEnabled(res.enabled)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (selectedSkills && selectedSkills.length > 0) {
       setCurrentSkills(selectedSkills);
     }
   }, [selectedSkills]);
+
+  const dynamicSkillPrompts = useMemo(() => {
+    if (!currentSkills || currentSkills.length === 0) return [];
+    const prompts: { label: string; text: string }[] = [];
+    currentSkills.forEach((s) => {
+      const lower = s.toLowerCase();
+      if (lower.includes('data') || lower.includes('chart') || lower.includes('report')) {
+        prompts.push({ label: '📊 Analyze Dataset Trends', text: 'Analyze this sample dataset and summarize the key performance metrics and trends.' });
+      } else if (lower.includes('code') || lower.includes('python') || lower.includes('test')) {
+        prompts.push({ label: '💻 Generate Python Automation', text: 'Write a Python automation script with unit tests and robust error handling.' });
+      } else if (lower.includes('web') || lower.includes('search') || lower.includes('crawl')) {
+        prompts.push({ label: '🌐 Research Web Insights', text: 'Research and synthesize the latest advancements in AI agent orchestration.' });
+      } else if (lower.includes('api')) {
+        prompts.push({ label: '🔗 Mock REST API Client', text: 'Design and mock a resilient REST API client with retry and error backoff.' });
+      } else if (lower.includes('calc') || lower.includes('math')) {
+        prompts.push({ label: '🔢 Compound Calculation', text: 'Calculate the compound return on $10,000 at 7.5% over 10 years step-by-step.' });
+      } else {
+        prompts.push({ label: `🎯 Apply ${s.replace('skill:', '')}`, text: `Execute task using the ${s.replace('skill:', '')} capability with verification.` });
+      }
+    });
+    return prompts.slice(0, 3);
+  }, [currentSkills]);
   
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
@@ -178,6 +209,25 @@ export default function ChatWorkspace({
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
                   Qwen2.5:3B (Ollama Local)
                 </span>
+                {isGraphAccessEnabled && (
+                  <span
+                    className="service-badge"
+                    style={{
+                      fontSize: '10px',
+                      padding: '2px 8px',
+                      background: '#eef2ff',
+                      color: '#4338ca',
+                      border: '1px solid #c7d2fe',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                    title="Knowledge Graph Access is active for chat"
+                  >
+                    <Sparkles size={10} color="#6366f1" />
+                    Graph Linked
+                  </span>
+                )}
               </div>
               <span style={{ fontSize: '11px', color: '#64748b' }}>
                 Context: {projectId ? `Project ${projectId.slice(0, 8)}...` : 'Global Mode'}
@@ -418,6 +468,51 @@ export default function ChatWorkspace({
 
               <div className="bubble-content">{msg.content}</div>
 
+              {/* Skill usage badges & Knowledge Graph Grounding (Phase F) */}
+              {msg.role === 'agent' && (
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {((msg.state?.execution_steps?.[0]?.active_skills) || (msg.mode === 'complex' && currentSkills.length > 0 ? currentSkills : null))?.map((sk: string) => (
+                    <span 
+                      key={sk} 
+                      style={{
+                        fontSize: '10px',
+                        padding: '2px 7px',
+                        borderRadius: 4,
+                        background: '#ecfdf5',
+                        border: '1px solid #a7f3d0',
+                        color: '#065f46',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <BrainCircuit size={10} color="#10b981" />
+                      Used: {sk.replace('skill:', '')}
+                    </span>
+                  ))}
+                  {msg.state?.execution_steps?.[0]?.graph_access_active && (
+                    <span 
+                      style={{
+                        fontSize: '10px',
+                        padding: '2px 7px',
+                        borderRadius: 4,
+                        background: '#eef2ff',
+                        border: '1px solid #c7d2fe',
+                        color: '#3730a3',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <Sparkles size={10} color="#6366f1" />
+                      Knowledge Graph Grounded
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Inspect Trace Button for this specific message */}
               {msg.state && (
                 <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -426,7 +521,10 @@ export default function ChatWorkspace({
                   </span>
                   <button 
                     className="card-header-action"
-                    onClick={() => setSelectedTraceState(msg.state!)}
+                    onClick={() => {
+                      setSelectedTraceState(msg.state!);
+                      setRightPanelTab('trace');
+                    }}
                   >
                     Inspect Trace DAG
                   </button>
@@ -458,8 +556,29 @@ export default function ChatWorkspace({
           )}
         </div>
 
-        {/* Quick Action Suggestion Pills */}
-        <div style={{ padding: '8px 20px', borderTop: '1px solid #f8fafc', display: 'flex', gap: 6, overflowX: 'auto' }}>
+        {/* Quick Action Suggestion Pills (Phase E) */}
+        <div style={{ padding: '8px 20px', borderTop: '1px solid #f8fafc', display: 'flex', gap: 6, overflowX: 'auto', alignItems: 'center' }}>
+          {/* Active Skill Dynamic Prompts */}
+          {dynamicSkillPrompts.map((sp, idx) => (
+            <button
+              key={idx}
+              className="chip-btn"
+              style={{
+                fontSize: '11px',
+                padding: '4px 10px',
+                whiteSpace: 'nowrap',
+                background: '#ecfdf5',
+                borderColor: '#a7f3d0',
+                color: '#065f46',
+                fontWeight: 600,
+              }}
+              onClick={() => handleSendPrompt(sp.text)}
+              title={sp.text}
+            >
+              {sp.label}
+            </button>
+          ))}
+
           {chatMode === 'simple' ? (
             <>
               <button 
@@ -604,22 +723,63 @@ export default function ChatWorkspace({
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Execution Trace & Agent DAG */}
+      {/* RIGHT COLUMN: Execution Trace & Agent DAG OR Project Knowledge Graph (Phase C & D) */}
       <div className="trace-column">
-        {/* Trace Header */}
+        {/* Trace Header with Tab Switcher */}
         <div className="trace-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Terminal size={18} color="#2563eb" />
-            <h2 className="trace-title">Execution Trace & DAG</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button 
+              type="button"
+              onClick={() => setRightPanelTab('trace')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '5px 10px',
+                borderRadius: '8px',
+                border: rightPanelTab === 'trace' ? '1px solid #2563eb' : '1px solid transparent',
+                background: rightPanelTab === 'trace' ? '#eff6ff' : 'transparent',
+                color: rightPanelTab === 'trace' ? '#1e40af' : '#64748b',
+                fontWeight: rightPanelTab === 'trace' ? 700 : 500,
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+              title="Execution Trace & DAG Inspector"
+            >
+              <Terminal size={14} color={rightPanelTab === 'trace' ? '#2563eb' : '#64748b'} />
+              <span>Trace & DAG</span>
+            </button>
+
+            <button 
+              type="button"
+              onClick={() => setRightPanelTab('graph')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '5px 10px',
+                borderRadius: '8px',
+                border: rightPanelTab === 'graph' ? '1px solid #6366f1' : '1px solid transparent',
+                background: rightPanelTab === 'graph' ? '#eef2ff' : 'transparent',
+                color: rightPanelTab === 'graph' ? '#4338ca' : '#64748b',
+                fontWeight: rightPanelTab === 'graph' ? 700 : 500,
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+              title="Project Knowledge Graph Analytics"
+            >
+              <Compass size={14} color={rightPanelTab === 'graph' ? '#6366f1' : '#64748b'} />
+              <span>Project Graph</span>
+            </button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {latestState && (
+            {rightPanelTab === 'trace' && latestState && (
               <span className={`nav-pill-badge ${latestState.status === 'completed' ? 'pill-emerald-cat' : latestState.status === 'failed' ? 'due-today' : 'pill-amber'}`}>
                 {latestState.status.toUpperCase()}
               </span>
             )}
-            {latestState && (
+            {rightPanelTab === 'trace' && latestState && (
               <button 
                 className="btn-ghost-outline" 
                 style={{ padding: '6px 10px', fontSize: '11px' }}
@@ -628,11 +788,25 @@ export default function ChatWorkspace({
                 <FileCode size={13} /> Raw JSON
               </button>
             )}
+            {rightPanelTab === 'graph' && (
+              <span className="nav-pill-badge pill-amber" style={{ fontSize: '10px' }}>
+                3D LIVE
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Trace Scroll Area */}
-        <div className="trace-scroll-area">
+        {rightPanelTab === 'graph' ? (
+          <div style={{ flex: 1, height: 'calc(100% - 52px)', overflow: 'hidden' }}>
+            <ProjectGraphPanel 
+              projectId={projectId} 
+              activeSkills={currentSkills} 
+              latestState={latestState} 
+            />
+          </div>
+        ) : (
+          /* Trace Scroll Area */
+          <div className="trace-scroll-area">
           {!latestState ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
               <Cpu size={40} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
@@ -798,6 +972,7 @@ export default function ChatWorkspace({
             </>
           )}
         </div>
+        )}
       </div>
 
       {/* Raw JSON Modal */}

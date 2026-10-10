@@ -1721,8 +1721,8 @@
   width: 100%;
   overflow-y: auto;
   background-color: var(--bg-canvas);
-  padding: 24px 32px;
-  gap: 18px;
+  padding: 20px 28px;
+  gap: 16px;
 }
 
 .mem-header {
@@ -1731,7 +1731,6 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 16px;
-  padding-bottom: 6px;
 }
 
 .mem-header-title {
@@ -1741,15 +1740,15 @@
 }
 
 .mem-header-icon {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
-  background: var(--brand-gradient);
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.35);
   flex-shrink: 0;
 }
 
@@ -1758,60 +1757,212 @@
   font-weight: 700;
   color: var(--text-main);
   letter-spacing: -0.02em;
-  margin: 0 0 2px 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mem-header-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.25);
 }
 
 .mem-muted {
-  font-size: 0.83rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
 }
 
 .mem-header-right {
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+/* Bento Stats Grid */
+.mem-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .mem-bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.mem-bento-card {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: var(--shadow-soft);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.mem-bento-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.mem-bento-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mem-bento-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mem-bento-val {
+  font-size: 1.28rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.mem-bento-lbl {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+.mem-bento-sub {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Cyber-Switch for Chat Access */
+.mem-cyber-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.mem-cyber-switch-on {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #065f46;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.15);
+}
+
+.mem-cyber-switch-on:hover {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: #10b981;
+}
+
+.mem-cyber-switch-off {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  color: #64748b;
+}
+
+.mem-cyber-switch-off:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: var(--border-medium);
+}
+
+.mem-switch-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.mem-dot-pulse {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulseGlow 1.8s infinite;
+}
+
+.mem-dot-off {
+  background: #94a3b8;
 }
 
 .mem-live-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-radius: 20px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .mem-live-sse {
-  background: rgba(16, 185, 129, 0.12);
+  background: rgba(16, 185, 129, 0.1);
   color: #059669;
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .mem-live-polling {
-  background: rgba(59, 130, 246, 0.12);
+  background: rgba(59, 130, 246, 0.1);
   color: #2563eb;
   border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 .mem-live-connecting {
-  background: rgba(245, 158, 11, 0.12);
+  background: rgba(245, 158, 11, 0.1);
   color: #d97706;
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
-/* Tabs */
+/* Tabs Bar */
 .mem-tabs {
   display: flex;
   align-items: center;
   gap: 6px;
   background: #ffffff;
   border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  padding: 4px;
+  border-radius: 12px;
+  padding: 5px;
   box-shadow: var(--shadow-soft);
   overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mem-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .mem-tab-btn {
@@ -1819,8 +1970,8 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 0.86rem;
+  border-radius: 8px;
+  font-size: 0.84rem;
   font-weight: 600;
   color: var(--text-muted);
   background: transparent;
@@ -1832,13 +1983,13 @@
 
 .mem-tab-btn:hover {
   color: var(--text-main);
-  background: var(--bg-card-hover);
+  background: var(--bg-subtle);
 }
 
 .mem-tab-active {
   color: #ffffff !important;
-  background: var(--brand-gradient) !important;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%) !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
 }
 
 /* Buttons & Inputs */
@@ -1848,7 +1999,7 @@
   gap: 6px;
   padding: 7px 14px;
   border-radius: 10px;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-secondary);
   background: #ffffff;
@@ -1866,7 +2017,7 @@
 
 .mem-btn-sm {
   padding: 4px 10px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   border-radius: 8px;
 }
 
@@ -1960,33 +2111,52 @@
 .mem-graph-layout {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   width: 100%;
   flex: 1;
+  min-height: 0;
 }
 
+/* High-Tech Dark Glassmorphism Command Toolbar */
 .mem-graph-toolbar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  background: #ffffff;
-  border: 1px solid var(--border-subtle);
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
-  padding: 8px 14px;
-  box-shadow: var(--shadow-soft);
+  padding: 9px 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+  color: #f1f5f9;
 }
 
 .mem-search-box {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 10px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   min-width: 240px;
-  color: var(--text-muted);
+  color: #e2e8f0;
+  transition: all 0.15s ease;
+}
+
+.mem-search-box:focus-within {
+  border-color: #38bdf8;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.mem-search-box input {
+  color: #f8fafc;
+}
+
+.mem-search-box input::placeholder {
+  color: #94a3b8;
 }
 
 .mem-type-filters {
@@ -2000,21 +2170,28 @@
 .mem-type-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   padding: 4px 10px;
   border-radius: 20px;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 600;
-  background: var(--bg-subtle);
-  border: 1px solid transparent;
-  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
+.mem-type-chip:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
 .mem-type-chip.mem-type-on {
-  background: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
 }
 
 .mem-type-dot {
@@ -2023,18 +2200,21 @@
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
 }
 
+/* 3D Canvas Stage */
 .mem-graph-stage {
   position: relative;
   width: 100%;
-  height: 640px;
-  min-height: 520px;
+  flex: 1;
+  min-height: 560px;
+  height: calc(100vh - 310px);
   border-radius: 18px;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 50%, #111827 0%, #030712 100%);
-  border: 1px solid #1f2937;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+  background: #040711;
+  border: 1px solid #1e293b;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
 }
 
 .mem-graph-canvas {
@@ -2047,6 +2227,96 @@
   touch-action: none;
 }
 
+/* In-Canvas Floating Camera HUD */
+.mem-canvas-hud {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 10;
+}
+
+.mem-hud-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.mem-hud-btn:hover {
+  background: rgba(30, 41, 59, 0.95);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.5);
+  transform: translateY(-1px);
+}
+
+.mem-hud-btn.active {
+  color: #38bdf8;
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+}
+
+/* In-Canvas Scope Badge */
+.mem-canvas-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.mem-pulse-radar {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+  animation: pulseGlow 2s infinite;
+}
+
+/* In-Canvas Controls Hint */
+.mem-canvas-hint {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Legend */
 .mem-legend {
   position: absolute;
   bottom: 14px;
@@ -2054,16 +2324,18 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 6px 14px;
-  font-size: 0.74rem;
-  color: #e2e8f0;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 7px 14px;
+  font-size: 0.72rem;
+  color: #cbd5e1;
   pointer-events: none;
   z-index: 5;
+  max-width: 78%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .mem-legend span {
@@ -2083,15 +2355,15 @@
   position: absolute;
   top: 16px;
   left: 16px;
-  background: rgba(15, 23, 42, 0.92);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 12px 16px;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 14px;
+  padding: 14px 18px;
   color: #f8fafc;
   font-size: 0.85rem;
   max-width: 320px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.6);
   pointer-events: none;
   z-index: 10;
   display: flex;
@@ -2113,13 +2385,13 @@
   width: 320px;
   max-height: 380px;
   overflow-y: auto;
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 14px;
   padding: 8px;
   z-index: 15;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -2174,22 +2446,22 @@
   box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
 
-/* Node Inspector Drawer */
+/* Node Inspector Cyber-Panel */
 .mem-inspector {
   position: absolute;
   top: 14px;
   right: 14px;
   bottom: 14px;
-  width: 380px;
-  background: rgba(15, 23, 42, 0.96);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  width: 390px;
+  background: rgba(11, 18, 33, 0.96);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(56, 189, 248, 0.22);
   border-radius: 16px;
-  padding: 18px;
+  padding: 20px;
   color: #f8fafc;
   overflow-y: auto;
-  z-index: 20;
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6);
+  z-index: 25;
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.65);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -2200,7 +2472,37 @@
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 12px;
+  padding-bottom: 14px;
+}
+
+.mem-importance-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.mem-importance-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.mem-importance-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.mem-importance-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
 }
 
 .mem-inspector-actions {
@@ -2214,10 +2516,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
-  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px;
 }
 
 .mem-section-title {

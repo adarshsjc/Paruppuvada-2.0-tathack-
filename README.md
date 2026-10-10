@@ -151,14 +151,46 @@ This diagram describes the intended direction. The final architecture may change
 
 Specific libraries, databases, models, and deployment choices will be documented once selected.
 
+## Visual Showcase & Platform Interface
+
+### 1. Unified Autonomous Dashboard
+The central command desk for multi-agent workflows, quick action dispatching, workspace status monitoring, and active project switching.
+![Dashboard Overview](assets/screenshots/05_dashboard_overview.png)
+
+### 2. Dual-Mode Open Chat Workspace
+Features instant **Simple Mode** for direct terminal-speed responses (~1-2s from local Qwen 2.5:3B) and deep **Complex Mode** with multi-agent orchestration, DAG inspection, and reviewer verification.
+![Open Chat Workspace](assets/screenshots/01_open_chat_workspace.png)
+
+### 3. Knowledge Graph & Neural Memory (Elevated v2.5)
+Interactive 3D graph visualization powered by an HTML5 canvas engine featuring cosmic starfields, 3D ground horizon depth rings, neon bloom shaders, an executive Bento Metric HUD, and a live Chat Neural Bridge grounding switch.
+![Knowledge Graph & Neural Memory](assets/screenshots/07_knowledge_graph_neural_matrix.png)
+
+### 4. 3D Cluster Topology & Skill Graph
+Visualizes inter-skill dependencies, task executions, hierarchical parent-child groupings, and real-time execution event pulses.
+![3D Skill Graph](assets/screenshots/04_3d_skill_graph.png)
+
+### 5. Project Workspaces & Skill Combinations
+Create isolated project environments with specialized agent skills selected via checkboxes, with auto-generated project chat workspaces.
+![Project Workspaces](assets/screenshots/06_project_workspaces.png)
+
+### 6. Memory Vault & Long-Term Notes
+Semantic episodic memory indexed by session, project, and global scopes with keyword/tag search and write-back support.
+![Memory Vault](assets/screenshots/02_memory_vault.png)
+
+### 7. Execution History & Audit Trail
+Chronological audit logging with reviewer scores, tool execution timings, verification verdicts, and one-click rerun capabilities.
+![Execution History & Audit Trail](assets/screenshots/03_execution_audit.png)
+
 ## Current Project Progression (Implemented)
 
-We have successfully completed Phases 1-5 of the baseline platform architecture:
-- **Phase 1 (Backend Foundation):** Set up a modular FastAPI backend structure, MockLLM testing environment, configuration management (`.env`), and a robust pytest testing suite.
-- **Phase 2 (Agent Orchestration):** Implemented a real Orchestrator-Worker pattern with three agent roles (Planner, Executor, Reviewer). Added strict JSON schema validation for all agent outputs and sandbox restrictions on tool execution.
-- **Phase 3 (Persistent Memory & Isolation):** Integrated an SQLite-backed memory provider supporting Session, Project, and Global memory types. Added automatic contextual memory injection before planning and automatic task-summarization write-backs. Project contexts are strictly isolated.
-- **Phase 4 (Frontend UI):** Built a desktop-first responsive React/Vite dashboard featuring a Chat Workspace, real-time Execution Trace panel, Project Selector, and a Memory Explorer. Connected the UI securely to the FastAPI backend.
-- **Phase 5 (OpenRouter Free Models Integration & One-Click Launch):** Integrated OpenRouter's Free Models Router (`openrouter/free` via `https://openrouter.ai/api/v1`) using the OpenAI-compatible SDK. Added dynamic model ID detection, resilient JSON schema extraction with retry protection against non-instruct/moderation models, automated live verification tests (`backend/live_tests.py`), and a one-click launcher script (`start_app.bat`).
+We have successfully completed Phases 1-7 of the platform architecture:
+- **Phase 1 (Backend Foundation):** Modular FastAPI backend, MockLLM testing environment, `.env` configuration, and comprehensive pytest test suite (36/36 passing).
+- **Phase 2 (Agent Orchestration & Modes):** Dual-mode execution engine: **Simple Mode** (direct local Qwen 2.5:3B via Ollama without delay) and **Complex Mode** (multi-agent Planner, Executor, Reviewer ensemble with tool calling and sandboxing).
+- **Phase 3 (Persistent Memory & Isolation):** SQLite-backed memory store supporting Session, Project, and Global scopes with automatic write-back.
+- **Phase 4 (Knowledge Graph v2.5 UI):** 3D perspective graph renderer with horizon rings, neon bloom, floating camera HUD dock, executive Bento Metric HUD cards, and live SSE event illumination.
+- **Phase 5 (Chat Neural Bridge):** Real-time toggle allowing Open Chat to dynamically ground queries against the Knowledge Graph even in fast Simple Mode.
+- **Phase 6 (Project Workspaces & Skill Packs):** Customizable project creator allowing users to checkbox modular skills and launch into dedicated scoped chat sessions with embedded DAG & project graph panels.
+- **Phase 7 (Ollama & Local LLM Integration):** Native integration with local Ollama (`qwen2.5:3b`) with streaming support and OpenRouter fallback.
 
 ## Quickstart & How to Run
 

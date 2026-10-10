@@ -8,8 +8,26 @@ from app.config import settings
 from app.memory.sqlite import get_memory_provider
 from app.memory.base import Project, MemoryItem
 from app.models.schemas import TaskState, Plan, Step, ReviewResult
+from app.graph.store import get_graph_store
 
 router = APIRouter()
+
+# In-memory settings state
+_settings_state = {
+    "graph_access_to_chat": False
+}
+
+class GraphAccessRequest(BaseModel):
+    enabled: bool
+
+@router.get("/api/v1/settings/graph-access")
+def get_graph_access():
+    return {"enabled": _settings_state.get("graph_access_to_chat", False)}
+
+@router.post("/api/v1/settings/graph-access")
+def set_graph_access(req: GraphAccessRequest):
+    _settings_state["graph_access_to_chat"] = bool(req.enabled)
+    return {"enabled": _settings_state["graph_access_to_chat"], "status": "updated"}
 
 class TaskRequest(BaseModel):
     description: str
@@ -120,9 +138,33 @@ def create_task(request: TaskRequest):
             )
             return TaskResponse(status=state.status, result=state.final_result or "", details=state.model_dump())
 
-        # Simple mode: fast terminal-style direct response from local Qwen 2.5:3B without agent/memory delay
+        # Simple mode: fast terminal-style direct response from local Qwen 2.5:3B
+        graph_active = _settings_state.get("graph_access_to_chat", False)
+        injected_knowledge = []
+        prompt_text = request.description
+
+        if graph_active:
+            try:
+                store = get_graph_store()
+                relevant_nodes = store.search_nodes(request.description, project_id=request.project_id, limit=3)
+                if not relevant_nodes:
+                    stopwords = {"what", "which", "where", "when", "how", "does", "exist", "with", "from", "that", "this", "have", "please", "tell", "about"}
+                    words = [w.strip("?,.!") for w in request.description.lower().split() if len(w) > 3 and w.strip("?,.!") not in stopwords]
+                    found = {}
+                    for w in words[:4]:
+                        for n in store.search_nodes(w, project_id=request.project_id, limit=2):
+                            found[n.id] = n
+                    relevant_nodes = list(found.values())[:3]
+
+                if relevant_nodes:
+                    injected_knowledge = [f"{n.label} ({n.node_type.value}): {n.description[:120]}" for n in relevant_nodes]
+                    context_prefix = "Relevant Knowledge Graph Context:\n" + "\n".join(f"- {k}" for k in injected_knowledge) + "\n\nUser Question:\n"
+                    prompt_text = f"{context_prefix}{request.description}"
+            except Exception:
+                pass
+
         llm = get_llm()
-        result_text = llm.generate_text(request.description)
+        result_text = llm.generate_text(prompt_text)
         result_text = result_text.strip() if result_text else "No response generated."
         model_name = getattr(llm, "model", settings.ollama_model)
 
@@ -130,11 +172,14 @@ def create_task(request: TaskRequest):
             "mode": "simple",
             "model": model_name,
             "action": {
-                "thought": "Terminal-style direct response without multi-agent ensemble or memory overhead.",
+                "thought": "Terminal-style direct response." if not graph_active else "Terminal-style response grounded with Knowledge Graph memory context.",
                 "tool": "none"
             },
             "tool_result": result_text
         }
+        if graph_active and injected_knowledge:
+            step_data["graph_access_active"] = True
+            step_data["injected_knowledge"] = injected_knowledge
         if request.selected_skills:
             step_data["active_skills"] = request.selected_skills
 

@@ -63,6 +63,12 @@ export const searchGraph = (
 export const fetchGraphStats = (): Promise<GraphStats> =>
   get<GraphStats>(`${API_BASE}/memory-graph/stats`);
 
+export const fetchGraphAccess = (): Promise<{ enabled: boolean }> =>
+  get<{ enabled: boolean }>(`${API_BASE}/settings/graph-access`);
+
+export const updateGraphAccess = (enabled: boolean): Promise<{ enabled: boolean; status: string }> =>
+  post<{ enabled: boolean; status: string }>(`${API_BASE}/settings/graph-access`, { enabled });
+
 // ---------------------------------------------------------------- skills
 export const fetchSkills = (projectId?: string | null): Promise<{ skills: SkillInfo[]; categories: SkillCategory[] }> =>
   get(`${API_BASE}/skills${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''}`);

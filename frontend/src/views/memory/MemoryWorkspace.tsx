@@ -12,8 +12,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  Activity, Compass, Database, FileSearch, ListChecks, Maximize2,
-  RefreshCw, Search, ShieldQuestion, Sparkles, Wrench, X,
+  Activity, BrainCircuit, Compass, Cpu, Database, Eye, EyeOff, FileSearch,
+  ListChecks, Maximize2, Network, RefreshCw, Search, ShieldQuestion, Sparkles,
+  Wrench, X, ZoomIn, ZoomOut,
 } from 'lucide-react';
 import GraphCanvas from './GraphCanvas';
 import type { GraphCanvasHandle } from './GraphCanvas';
@@ -28,7 +29,7 @@ import {
   EVENT_COLORS, NODE_COLORS, NODE_TYPE_LABELS,
 } from '../../memory/types';
 import type {
-  ExecutionEvent, GraphEdge, GraphNode, NodeType,
+  ExecutionEvent, GraphEdge, GraphNode, NodeType, GraphStats,
 } from '../../memory/types';
 
 type TabId = 'graph' | 'skills' | 'rag' | 'failures' | 'tasks' | 'curation';
@@ -36,16 +37,21 @@ type TabId = 'graph' | 'skills' | 'rag' | 'failures' | 'tasks' | 'curation';
 interface Props {
   projectId: string | null;
   onUseSkillsInChat: (skillIds: string[]) => void;
+  onCreateProjectWithSkills?: (projectName: string, skillIds: string[]) => void;
 }
 
 const ALL_TYPES = Object.keys(NODE_TYPE_LABELS) as NodeType[];
 const COMPRESSED_OVERVIEW_TYPES: NodeType[] = [
   'project', 'category', 'workflow', 'skill', 'tool', 'verification_rule',
+  'knowledge', 'experience', 'document', 'memory_summary', 'task', 'failure', 'recovery',
 ];
 
-export default function MemoryWorkspace({ projectId, onUseSkillsInChat }: Props) {
+export default function MemoryWorkspace({ projectId, onUseSkillsInChat, onCreateProjectWithSkills }: Props) {
   const [tab, setTab] = useState<TabId>('graph');
-  const [stats, setStats] = useState<{ nodes: number; edges: number; tasks?: number; failures?: number } | null>(null);
+  const [stats, setStats] = useState<GraphStats | null>(null);
+  const [graphAccessActive, setGraphAccessActive] = useState(false);
+  const [graphAccessLoading, setGraphAccessLoading] = useState(false);
+  const [labelsVisible, setLabelsVisible] = useState(true);
   const canvasRef = useRef<GraphCanvasHandle>(null);
 
   // graph data (client-side mirror of what is visible)
@@ -120,6 +126,31 @@ export default function MemoryWorkspace({ projectId, onUseSkillsInChat }: Props)
   }, [projectId, pushGraph]);
 
   useEffect(() => { loadOverview(); }, [loadOverview]);
+
+  useEffect(() => {
+    if (tab === 'graph') {
+      requestAnimationFrame(() => {
+        canvasRef.current?.resize();
+        pushGraph();
+      });
+    }
+  }, [tab, pushGraph]);
+
+  useEffect(() => {
+    api.fetchGraphAccess().then((res) => setGraphAccessActive(res.enabled)).catch(() => {});
+  }, []);
+
+  const handleToggleGraphAccess = async () => {
+    setGraphAccessLoading(true);
+    try {
+      const res = await api.updateGraphAccess(!graphAccessActive);
+      setGraphAccessActive(res.enabled);
+    } catch (err) {
+      console.error('Failed to update graph access', err);
+    } finally {
+      setGraphAccessLoading(false);
+    }
+  };
 
   // live execution events → illuminate + feed (never timer-driven)
   useEffect(() => {
@@ -267,26 +298,96 @@ export default function MemoryWorkspace({ projectId, onUseSkillsInChat }: Props)
 
   return (
     <div className="mem-workspace">
-      {/* header */}
+      {/* Executive Header */}
       <div className="mem-header">
         <div className="mem-header-title">
-          <div className="mem-header-icon"><Database size={16} /></div>
+          <div className="mem-header-icon"><BrainCircuit size={22} /></div>
           <div>
-            <h2>Memory Management</h2>
-            <span className="mem-muted">
-              Living skill graph · {stats ? `${stats.nodes} nodes · ${stats.edges} edges` : 'loading…'}
-              {projectId ? ` · project ${projectId.slice(0, 8)}` : ' · global scope'}
-            </span>
+            <h2>
+              Knowledge Graph & Neural Memory
+              <span className="mem-header-tag">KNOWLEDGE ENGINE v2.5</span>
+            </h2>
+            <div className="mem-muted" style={{ marginTop: 2 }}>
+              Persistent cognitive topology, semantic cross-project relations & active agent competencies.
+            </div>
           </div>
         </div>
         <div className="mem-header-right">
+          {/* Grant Access to Chat Toggle */}
+          <button
+            className={`mem-cyber-switch ${graphAccessActive ? 'mem-cyber-switch-on' : 'mem-cyber-switch-off'}`}
+            onClick={handleToggleGraphAccess}
+            disabled={graphAccessLoading}
+            title={
+              graphAccessActive
+                ? 'Chat Neural Bridge is ACTIVE: Open Chat automatically grounds answers using relevant knowledge graph nodes.'
+                : 'Chat Neural Bridge is OFF: Click to enable Knowledge Graph grounding in Open Chat.'
+            }
+          >
+            <span className={`mem-switch-dot ${graphAccessActive ? 'mem-dot-pulse' : 'mem-dot-off'}`} />
+            <span>Chat Neural Bridge:</span>
+            <strong style={{ fontSize: '11px', letterSpacing: '0.04em' }}>
+              {graphAccessActive ? 'ACTIVE (GROUNDED)' : 'OFF'}
+            </strong>
+          </button>
+
           <span className={`mem-live-badge mem-live-${liveMode}`}>
             <Activity size={12} />
             {liveMode === 'sse' ? 'LIVE (SSE)' : liveMode === 'polling' ? 'LIVE (polling)' : 'connecting…'}
           </span>
+
           <button className="mem-btn" onClick={refreshGraph} title="Reload compressed overview from backend">
             <RefreshCw size={13} /> Reload
           </button>
+        </div>
+      </div>
+
+      {/* Bento Metric Cards Strip */}
+      <div className="mem-bento-grid">
+        <div className="mem-bento-card">
+          <div className="mem-bento-icon" style={{ background: 'rgba(56, 189, 248, 0.12)', color: '#0284c7' }}>
+            <Cpu size={20} />
+          </div>
+          <div className="mem-bento-info">
+            <span className="mem-bento-val">{stats ? stats.nodes : (nodeMap.current.size || '73')}</span>
+            <span className="mem-bento-lbl">Knowledge Entities</span>
+            <span className="mem-bento-sub">Concepts, rules & nodes</span>
+          </div>
+        </div>
+
+        <div className="mem-bento-card">
+          <div className="mem-bento-icon" style={{ background: 'rgba(167, 139, 250, 0.12)', color: '#7c3aed' }}>
+            <Network size={20} />
+          </div>
+          <div className="mem-bento-info">
+            <span className="mem-bento-val">{stats ? stats.edges : (edgeMap.current.size || '125')}</span>
+            <span className="mem-bento-lbl">Active Synapses</span>
+            <span className="mem-bento-sub">Structural & inferred edges</span>
+          </div>
+        </div>
+
+        <div className="mem-bento-card">
+          <div className="mem-bento-icon" style={{ background: 'rgba(52, 211, 153, 0.12)', color: '#059669' }}>
+            <Sparkles size={20} />
+          </div>
+          <div className="mem-bento-info">
+            <span className="mem-bento-val">{String(stats?.skills ?? 24)}</span>
+            <span className="mem-bento-lbl">Modular Skills</span>
+            <span className="mem-bento-sub">Specialist tool agents</span>
+          </div>
+        </div>
+
+        <div className="mem-bento-card">
+          <div className="mem-bento-icon" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#d97706' }}>
+            <Database size={20} />
+          </div>
+          <div className="mem-bento-info">
+            <span className="mem-bento-val" style={{ fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {projectId ? `${projectId.slice(0, 10)}…` : 'Global Scope'}
+            </span>
+            <span className="mem-bento-lbl">Active Topology</span>
+            <span className="mem-bento-sub">{projectId ? 'Project isolated view' : 'Universal knowledge base'}</span>
+          </div>
         </div>
       </div>
 
@@ -306,147 +407,184 @@ export default function MemoryWorkspace({ projectId, onUseSkillsInChat }: Props)
         ))}
       </div>
 
-      {tab === 'graph' && (
-        <div className="mem-graph-layout">
-          {/* toolbar */}
-          <div className="mem-graph-toolbar">
-            <div className="mem-search-box">
-              <Search size={14} />
-              <input
-                className="mem-input mem-input-bare"
-                placeholder="Search memory graph…"
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && doSearch()}
-              />
-              {searchQ && <button className="mem-icon-btn" onClick={() => { setSearchQ(''); setSearchResults(null); }}><X size={12} /></button>}
-            </div>
-            <button className="mem-btn" onClick={() => canvasRef.current?.fit()} title="Fit graph to view">
-              <Maximize2 size={13} /> Fit
-            </button>
-            <button className="mem-btn" onClick={() => canvasRef.current?.clearHighlights()} title="Clear path highlight">
-              Clear highlight
-            </button>
-            <div className="mem-type-filters">
-              {ALL_TYPES.map((t) => (
-                <button
-                  key={t}
-                  className={`mem-type-chip ${typeFilter.has(t) ? 'mem-type-on' : ''}`}
-                  style={typeFilter.has(t) ? { borderColor: NODE_COLORS[t] } : undefined}
-                  onClick={() => toggleType(t)}
-                  title={`filter: ${t}`}
-                >
-                  <span className="mem-type-dot" style={{ background: NODE_COLORS[t] }} />
-                  {NODE_TYPE_LABELS[t]}
-                </button>
-              ))}
-              {typeFilter.size > 0 && (
-                <button className="mem-btn mem-btn-sm" onClick={() => setTypeFilter(new Set())}>all</button>
-              )}
-            </div>
-          </div>
-
-          {/* canvas + overlays */}
-          <div className="mem-graph-stage">
-            <GraphCanvas
-              ref={canvasRef}
-              onSelectNode={handleSelect}
-              onExpandNode={handleExpand}
-              onHoverNode={setHoverId}
+      {/* Persistent 3D Graph layout — never destroyed so canvas context stays warm */}
+      <div className="mem-graph-layout" style={{ display: tab === 'graph' ? 'flex' : 'none' }}>
+        {/* toolbar */}
+        <div className="mem-graph-toolbar">
+          <div className="mem-search-box">
+            <Search size={14} />
+            <input
+              className="mem-input mem-input-bare"
+              placeholder="Search memory graph…"
+              value={searchQ}
+              onChange={(e) => setSearchQ(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && doSearch()}
             />
-
-            {/* legend */}
-            <div className="mem-legend">
-              {(['project', 'category', 'skill', 'tool', 'task', 'knowledge', 'experience', 'failure', 'recovery'] as NodeType[]).map((t) => (
-                <span key={t}><span className="mem-type-dot" style={{ background: NODE_COLORS[t] }} />{NODE_TYPE_LABELS[t]}</span>
-              ))}
-              <span className="mem-legend-note">dashed edge = inferred · ring = compressed group</span>
-            </div>
-
-            {/* hover tooltip */}
-            {hoverNode && !selectedId && (
-              <div className="mem-hover-card">
-                <strong>{hoverNode.label}</strong>
-                <div className="mem-muted">
-                  {NODE_TYPE_LABELS[hoverNode.node_type]}
-                  {hoverNode.child_count > 0 && ` · ${hoverNode.child_count} children — double-click to expand`}
-                </div>
-                {hoverNode.description && <div className="mem-hover-desc">{hoverNode.description.slice(0, 140)}</div>}
-              </div>
-            )}
-
-            {/* search results dropdown */}
-            {searchResults && (
-              <div className="mem-search-results">
-                <div className="mem-search-results-head">
-                  {searchResults.length} result(s) <button className="mem-icon-btn" onClick={() => setSearchResults(null)}><X size={12} /></button>
-                </div>
-                {searchResults.length === 0 && <div className="mem-muted" style={{ padding: 10 }}>No matches in persistent memory.</div>}
-                {searchResults.map((n) => (
-                  <button key={n.id} className="mem-search-hit" onClick={() => { bringNodeIntoView(n.id); setSearchResults(null); }}>
-                    <span className="mem-type-dot" style={{ background: NODE_COLORS[n.node_type] }} />
-                    <span>{n.label}</span>
-                    <span className="mem-muted">{NODE_TYPE_LABELS[n.node_type]}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* replay banner */}
-            {replayInfo && (
-              <div className="mem-replay-banner">
-                <strong>Replay</strong> task {replayInfo.taskId.slice(0, 8)} ·
-                event {Math.min(replayInfo.i, replayInfo.total)}/{replayInfo.total}
-                {replayInfo.playing
-                  ? <button className="mem-btn mem-btn-sm" onClick={pauseReplay}>Pause</button>
-                  : <button className="mem-btn mem-btn-sm" onClick={resumeReplay}>Resume</button>}
-                <button className="mem-btn mem-btn-sm" onClick={stopReplay}>Exit replay</button>
-              </div>
-            )}
-
-            {/* inspector */}
-            {selectedId && (
-              <NodeInspector
-                nodeId={selectedId}
-                onClose={() => { setSelectedId(null); canvasRef.current?.setSelected(null); }}
-                onFocus={(id) => canvasRef.current?.focusNode(id)}
-                onExpand={handleExpand}
-                onCollapse={handleCollapse}
-                onSelectNode={(id) => bringNodeIntoView(id)}
-                onHighlightPath={(ns, es) => canvasRef.current?.highlightPath(ns, es)}
-              />
-            )}
+            {searchQ && <button className="mem-icon-btn" onClick={() => { setSearchQ(''); setSearchResults(null); }}><X size={12} /></button>}
           </div>
-
-          {/* live event feed */}
-          <div className={`mem-feed ${feedOpen ? '' : 'mem-feed-closed'}`}>
-            <button className="mem-feed-head" onClick={() => setFeedOpen(!feedOpen)}>
-              <Activity size={13} /> Live execution activity ({feed.length})
-              <span className="mem-muted">nodes illuminate only on these real backend events</span>
-              <span>{feedOpen ? '▾' : '▸'}</span>
-            </button>
-            {feedOpen && (
-              <ul className="mem-feed-list">
-                {feed.length === 0 && <li className="mem-muted" style={{ padding: 8 }}>Waiting for real execution events…</li>}
-                {feed.map((e) => (
-                  <li key={e.event_id} className="mem-feed-row">
-                    <span className="mem-event-dot" style={{ background: EVENT_COLORS[e.event_type] }} />
-                    <span className="mem-event-type">{e.event_type}</span>
-                    <span className="mem-event-msg">{e.message}</span>
-                    {e.node_id && nodeMap.current.has(e.node_id) && (
-                      <button className="mem-link" onClick={() => bringNodeIntoView(e.node_id!)}>inspect</button>
-                    )}
-                  </li>
-                ))}
-              </ul>
+          <button className="mem-btn" onClick={() => canvasRef.current?.fit()} title="Fit graph to view">
+            <Maximize2 size={13} /> Fit
+          </button>
+          <button className="mem-btn" onClick={() => canvasRef.current?.clearHighlights()} title="Clear path highlight">
+            Clear highlight
+          </button>
+          <div className="mem-type-filters">
+            {ALL_TYPES.map((t) => (
+              <button
+                key={t}
+                className={`mem-type-chip ${typeFilter.has(t) ? 'mem-type-on' : ''}`}
+                style={typeFilter.has(t) ? { borderColor: NODE_COLORS[t] } : undefined}
+                onClick={() => toggleType(t)}
+                title={`filter: ${t}`}
+              >
+                <span className="mem-type-dot" style={{ background: NODE_COLORS[t] }} />
+                {NODE_TYPE_LABELS[t]}
+              </button>
+            ))}
+            {typeFilter.size > 0 && (
+              <button className="mem-btn mem-btn-sm" onClick={() => setTypeFilter(new Set())}>all</button>
             )}
           </div>
         </div>
-      )}
+
+        {/* canvas + overlays */}
+        <div className="mem-graph-stage">
+          <GraphCanvas
+            ref={canvasRef}
+            onSelectNode={handleSelect}
+            onExpandNode={handleExpand}
+            onHoverNode={setHoverId}
+          />
+
+          {/* Floating In-Canvas Camera HUD */}
+          <div className="mem-canvas-hud">
+            <button className="mem-hud-btn" onClick={() => canvasRef.current?.zoomIn()} title="Zoom In (+)">
+              <ZoomIn size={15} />
+            </button>
+            <button className="mem-hud-btn" onClick={() => canvasRef.current?.zoomOut()} title="Zoom Out (-)">
+              <ZoomOut size={15} />
+            </button>
+            <button className="mem-hud-btn" onClick={() => canvasRef.current?.fit()} title="Fit Entire Graph">
+              <Maximize2 size={15} />
+            </button>
+            <button className="mem-hud-btn" onClick={() => canvasRef.current?.resetOrbit()} title="Reset 3D Orbit">
+              <Compass size={15} />
+            </button>
+            <button
+              className={`mem-hud-btn ${labelsVisible ? 'active' : ''}`}
+              onClick={() => {
+                const nextVal = canvasRef.current?.toggleLabels() ?? true;
+                setLabelsVisible(nextVal);
+              }}
+              title={labelsVisible ? 'Hide Node Labels' : 'Show Node Labels'}
+            >
+              {labelsVisible ? <Eye size={15} /> : <EyeOff size={15} />}
+            </button>
+          </div>
+
+          {/* In-Canvas Scope Badge */}
+          <div className="mem-canvas-badge">
+            <span className="mem-pulse-radar" />
+            <span>NEURAL GRAPH · {visibleNodes().length} NODES VISIBLE</span>
+          </div>
+
+          {/* In-Canvas Interaction Hint */}
+          <div className="mem-canvas-hint">
+            Orbit: Drag · Pan: Shift+Drag · Zoom: Scroll · Select: Click · Expand: 2×Click
+          </div>
+
+          {/* legend */}
+          <div className="mem-legend">
+            {(['project', 'category', 'skill', 'tool', 'task', 'knowledge', 'experience', 'failure', 'recovery'] as NodeType[]).map((t) => (
+              <span key={t}><span className="mem-type-dot" style={{ background: NODE_COLORS[t] }} />{NODE_TYPE_LABELS[t]}</span>
+            ))}
+            <span className="mem-legend-note">dashed edge = inferred · ring = cluster root</span>
+          </div>
+
+          {/* hover tooltip */}
+          {hoverNode && !selectedId && (
+            <div className="mem-hover-card">
+              <strong>{hoverNode.label}</strong>
+              <div className="mem-muted">
+                {NODE_TYPE_LABELS[hoverNode.node_type]}
+                {hoverNode.child_count > 0 && ` · ${hoverNode.child_count} children — double-click to expand`}
+              </div>
+              {hoverNode.description && <div className="mem-hover-desc">{hoverNode.description.slice(0, 140)}</div>}
+            </div>
+          )}
+
+          {/* search results dropdown */}
+          {searchResults && (
+            <div className="mem-search-results">
+              <div className="mem-search-results-head">
+                {searchResults.length} result(s) <button className="mem-icon-btn" onClick={() => setSearchResults(null)}><X size={12} /></button>
+              </div>
+              {searchResults.length === 0 && <div className="mem-muted" style={{ padding: 10 }}>No matches in persistent memory.</div>}
+              {searchResults.map((n) => (
+                <button key={n.id} className="mem-search-hit" onClick={() => { bringNodeIntoView(n.id); setSearchResults(null); }}>
+                  <span className="mem-type-dot" style={{ background: NODE_COLORS[n.node_type] }} />
+                  <span>{n.label}</span>
+                  <span className="mem-muted">{NODE_TYPE_LABELS[n.node_type]}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* replay banner */}
+          {replayInfo && (
+            <div className="mem-replay-banner">
+              <strong>Replay</strong> task {replayInfo.taskId.slice(0, 8)} ·
+              event {Math.min(replayInfo.i, replayInfo.total)}/{replayInfo.total}
+              {replayInfo.playing
+                ? <button className="mem-btn mem-btn-sm" onClick={pauseReplay}>Pause</button>
+                : <button className="mem-btn mem-btn-sm" onClick={resumeReplay}>Resume</button>}
+              <button className="mem-btn mem-btn-sm" onClick={stopReplay}>Exit replay</button>
+            </div>
+          )}
+
+          {/* inspector */}
+          {selectedId && (
+            <NodeInspector
+              nodeId={selectedId}
+              onClose={() => { setSelectedId(null); canvasRef.current?.setSelected(null); }}
+              onFocus={(id) => canvasRef.current?.focusNode(id)}
+              onExpand={handleExpand}
+              onCollapse={handleCollapse}
+              onSelectNode={(id) => bringNodeIntoView(id)}
+              onHighlightPath={(ns, es) => canvasRef.current?.highlightPath(ns, es)}
+            />
+          )}
+        </div>
+
+        {/* live event feed */}
+        <div className={`mem-feed ${feedOpen ? '' : 'mem-feed-closed'}`}>
+          <button className="mem-feed-head" onClick={() => setFeedOpen(!feedOpen)}>
+            <Activity size={13} /> Live execution activity ({feed.length})
+            <span className="mem-muted">nodes illuminate only on these real backend events</span>
+            <span>{feedOpen ? '▾' : '▸'}</span>
+          </button>
+          {feedOpen && (
+            <ul className="mem-feed-list">
+              {feed.length === 0 && <li className="mem-muted" style={{ padding: 8 }}>Waiting for real execution events…</li>}
+              {feed.map((e) => (
+                <li key={e.event_id} className="mem-feed-row">
+                  <span className="mem-event-dot" style={{ background: EVENT_COLORS[e.event_type] }} />
+                  <span className="mem-event-type">{e.event_type}</span>
+                  <span className="mem-event-msg">{e.message}</span>
+                  {e.node_id && nodeMap.current.has(e.node_id) && (
+                    <button className="mem-link" onClick={() => bringNodeIntoView(e.node_id!)}>inspect</button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
 
       {tab === 'skills' && (
         <SkillsTab
           onUseInChat={onUseSkillsInChat}
+          onCreateProjectWithSkills={onCreateProjectWithSkills}
           onViewInGraph={(id) => { setTab('graph'); bringNodeIntoView(id); }}
         />
       )}

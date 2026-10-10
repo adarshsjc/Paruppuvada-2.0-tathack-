@@ -18,6 +18,11 @@ export interface GraphCanvasHandle {
   setSelected(id: string | null): void;
   focusNode(id: string): void;
   fit(): void;
+  zoomIn(): void;
+  zoomOut(): void;
+  resetOrbit(): void;
+  toggleLabels(): boolean;
+  resize(): void;
   illuminate(evt: { event_type: string; node_id?: string | null; edge_id?: string | null }): void;
   highlightPath(nodeIds: string[], edgeIds: string[]): void;
   clearHighlights(): void;
@@ -118,6 +123,11 @@ const GraphCanvas = forwardRef<GraphCanvasHandle, Props>(function GraphCanvas(
     setSelected: (id) => g3Ref.current?.setSelected(id),
     focusNode: (id) => g3Ref.current?.focusNode(id),
     fit: () => g3Ref.current?.fitToView(),
+    zoomIn: () => g3Ref.current?.zoomIn(),
+    zoomOut: () => g3Ref.current?.zoomOut(),
+    resetOrbit: () => g3Ref.current?.resetOrbit(),
+    toggleLabels: () => g3Ref.current?.toggleLabels() ?? true,
+    resize: () => g3Ref.current?.resize(),
     illuminate: (evt) => g3Ref.current?.illuminate(evt as Parameters<Graph3D['illuminate']>[0]),
     highlightPath: (n, e) => g3Ref.current?.highlightPath(n, e),
     clearHighlights: () => g3Ref.current?.highlightPath([], []),

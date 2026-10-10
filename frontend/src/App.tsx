@@ -134,6 +134,18 @@ function App() {
                setSelectedSkills(skillIds);
                setActiveView('open_chat');
             }}
+            onCreateProjectWithSkills={async (projectName, skillIds) => {
+              try {
+                const { createProject } = await import('./api');
+                const newProj = await createProject(projectName, skillIds);
+                await loadProjects();
+                setSelectedProjectId(newProj.id);
+                setSelectedSkills(skillIds);
+                setActiveView('open_chat');
+              } catch (e) {
+                console.error('Failed to create project with skills', e);
+              }
+            }}
           />
         );
       case 'settings':
@@ -272,14 +284,14 @@ function App() {
                 </div>
               </button>
 
-              {/* 3D Skill Graph & Memory */}
+              {/* Knowledge Graph */}
               <button 
                 className={`nav-link ${activeView === 'memory_mgmt' ? 'active' : ''}`}
                 onClick={() => setActiveView('memory_mgmt')}
               >
                 <div className="nav-link-left">
                   <Compass className="nav-link-icon" />
-                  <span>3D Skill Graph</span>
+                  <span>Knowledge Graph</span>
                 </div>
                 <span className="nav-pill-badge pill-amber">LIVE 3D</span>
               </button>

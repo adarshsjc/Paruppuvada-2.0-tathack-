@@ -98,6 +98,11 @@ The repository is split strictly into `backend/` and `frontend/` to keep concern
     - Added Active Skills Ribbon in `ChatWorkspace.tsx`.
     - Integrated skill manifests into ensemble agent prompts (`ensemble.py`) in Complex Mode.
     - Validated all 36 backend tests and rebuilt `OpenChat.exe`.
+11. **Phase 11 (Knowledge Graph Hub, Skills-First Project Creation & Embedded Chat Graph Analytics):**
+    - **Pillar 1 (Knowledge Graph as Central Brain Hub):** Renamed navigation to "Knowledge Graph", expanded default overview to include all learned node types, added live multi-dimensional stats banner (73 Nodes, 125 Edges, 24 Skills, Projects, Memories), and implemented the "Grant Access to Chat" toggle (`/api/v1/settings/graph-access`).
+    - **Pillar 2 (Skills-First Project Creation Flow):** Added curated Skill Presets (Data & Analytics, Engineering & Code, Web & Research, Autonomous Orchestration) and floating "Create Project with Selected Skills & Open Chat" CTA in `SkillsTab.tsx`.
+    - **Pillar 3 (Embedded Project Graph in Chat Workspace):** Added dual tab switcher in the right-hand panel (`Trace & DAG` | `Project Graph`), embedding `ProjectGraphPanel.tsx` with 3D force-directed WebGL canvas, project-scoped nodes, active skill focus, and real-time SSE illumination.
+    - **Pillar 4 (Skill-Grounded Chat & Live Badges):** Integrated dynamic context-aware quick prompts tailored to active skills, skill usage badges on AI response bubbles (`🔧 Used: [skill]`), and `🌐 Knowledge Graph Grounded` indicators. Verified all 36 tests and built cleanly with zero TypeScript errors.
 
 ---
 

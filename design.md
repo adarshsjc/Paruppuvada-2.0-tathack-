@@ -151,28 +151,44 @@ The core design tokens powering Open Chat:
   - `Create Project Only`: Saves project without navigating away.
   - `Create & Launch Chat Workspace ➔`: Primary action creating the project, saving the selected skills to memory, and immediately opening the Chat Workspace with the new project active.
 
-### 4.3. 3D Force-Directed Skill & Memory Graph (`MemoryWorkspace.tsx`)
-- **3D Celestial Space:**
-  - Built with `3d-force-graph` and HTML5 Canvas fallback.
-  - Nodes auto-colored by category:
-    - Core Utilities: Cyan (`#06b6d4`)
-    - Knowledge & Memory: Purple (`#8b5cf6`)
-    - Web Research: Blue (`#2563eb`)
-    - Verification & Quality: Emerald (`#10b981`)
-    - Architecture & Synthesis: Amber (`#f59e0b`)
-    - Analysis & Integration: Indigo (`#6366f1`)
-- **Controls & Interaction:**
-  - Reset Camera, Fit to View, and 2D/3D Mode toggle.
-  - Click-to-inspect sidebar revealing node ID, category, connected edges (`CONTAINS`, `CALLS`, `REQUIRES`, `VERIFIED_BY`), and metadata.
+### 4.3. Knowledge Graph & Memory Central Hub (`MemoryWorkspace.tsx`)
+- **Living Knowledge Hub:**
+  - Renamed from "3D Skill Graph" to "Knowledge Graph" as the primary knowledge visualization.
+  - Multi-dimensional stats banner displaying live counts: `73 Nodes · 125 Edges · 24 Skills · Projects · Memories`.
+  - **"Grant Access to Chat" Toggle:**
+    - Interactive switch button in header (`RESTRICTED / GRANTED`).
+    - When enabled, sends `POST /api/v1/settings/graph-access` with `{ enabled: true }`.
+    - Enables lightweight RAG injection into Simple Mode and signals graph grounding in chat.
+  - Comprehensive overview loading roots and expanded branches across skills, categories, workflows, tools, and rules.
 
-### 4.4. Real-Time Execution Trace & DAG Inspector (`ExecutionInspector.tsx`)
-- **Autonomous Planner Card:** Displays goal, steps count, and expected output.
-- **Tool Iterations Accordion:** Step-by-step display of executor actions and payloads.
-- **Parallel Agent Ensemble (3 Solvers):**
-  - Direct Solver card.
-  - Critical Thinker review card.
-  - Research Synthesizer card.
-  - Green "Selected" badge indicating the winning solution chosen by the Judge.
+### 4.4. Skills-First Project Creation Flow (`SkillsTab.tsx`)
+- **First-Class Entry Point:**
+  - Browse and filter all 24 skills by categories or keywords.
+  - **Quick Skill Presets Strip:** Instant 1-click presets for common workflows:
+    - `📊 Data & Analytics`
+    - `💻 Engineering & Code`
+    - `🌐 Web & Research`
+    - `🤖 Autonomous Orchestration`
+  - **Integrated Project Creation Bar:**
+    - Input for custom project name directly below selected skills.
+    - `🚀 Create Project & Open Chat →` button initializes project with chosen skills and seamlessly transitions to the Project Chat Workspace.
+
+### 4.5. Embedded Project Graph Panel in Chat Workspace (`ProjectGraphPanel.tsx`)
+- **Dual Right-Panel Tab Switcher:**
+  - `Trace & DAG`: Standard execution trace inspector for multi-agent loops and tool runs.
+  - `Project Graph`: Live, interactive 3D WebGL knowledge graph scoped directly to the current project context.
+- **Embedded Visual Features:**
+  - Displays project root node, active skill nodes, connected tools, and execution run entities.
+  - Active Skills chip strip at top allowing single-click camera focus on any skill node in 3D space.
+  - Live pulse animation via SSE subscription whenever complex tasks complete.
+  - Interactive click-to-inspect drawer showing node label, child counts, descriptions, and branch expansion controls.
+
+### 4.6. Skill-Grounded Chat & Live Badging
+- **Skill Usage Badges on AI Response Bubbles:**
+  - Highlights active skills utilized in the query (`🔧 Used: [skill_name]`).
+  - Displays `🌐 Knowledge Graph Grounded` when graph retrieval was included.
+- **Context-Aware Dynamic Quick Prompts:**
+  - When skills are configured, dynamically renders tailored quick action prompt chips based on active skills (e.g. data analysis, python coding, web research).
 
 ---
 

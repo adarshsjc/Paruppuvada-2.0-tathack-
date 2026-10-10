@@ -4,19 +4,21 @@
    and hand the selection to a new chat or locate the skill in the graph.
    ========================================================================= */
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Filter, Locate, MessageSquarePlus, RefreshCw, XCircle } from 'lucide-react';
+import { CheckCircle2, Filter, FolderPlus, Locate, MessageSquarePlus, RefreshCw, Rocket, XCircle } from 'lucide-react';
 import * as api from '../../memory/api';
 import type { SelectionReport, SkillCategory, SkillInfo } from '../../memory/types';
 
 interface Props {
   onUseInChat: (skillIds: string[]) => void;
+  onCreateProjectWithSkills?: (projectName: string, skillIds: string[]) => void;
   onViewInGraph: (nodeId: string) => void;
 }
 
-export default function SkillsTab({ onUseInChat, onViewInGraph }: Props) {
+export default function SkillsTab({ onUseInChat, onCreateProjectWithSkills, onViewInGraph }: Props) {
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [categories, setCategories] = useState<SkillCategory[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [projectName, setProjectName] = useState('');
   const [report, setReport] = useState<SelectionReport | null>(null);
   const [catFilter, setCatFilter] = useState<string>('all');
   const [q, setQ] = useState('');
@@ -68,6 +70,50 @@ export default function SkillsTab({ onUseInChat, onViewInGraph }: Props) {
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <button className="mem-btn" onClick={load}><RefreshCw size={13} /> Refresh</button>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Skill Presets:</span>
+        <button
+          className="mem-btn mem-btn-sm"
+          onClick={() => {
+            const matches = skills.filter(s => s.id.includes('data') || s.id.includes('chart') || s.id.includes('report')).map(s => s.id);
+            setSelected(new Set(matches.slice(0, 3)));
+          }}
+          title="Select Data Analysis & Reporting skills"
+        >
+          📊 Data & Analytics
+        </button>
+        <button
+          className="mem-btn mem-btn-sm"
+          onClick={() => {
+            const matches = skills.filter(s => s.id.includes('code') || s.id.includes('python') || s.id.includes('test')).map(s => s.id);
+            setSelected(new Set(matches.slice(0, 3)));
+          }}
+          title="Select Engineering & Code skills"
+        >
+          💻 Engineering & Code
+        </button>
+        <button
+          className="mem-btn mem-btn-sm"
+          onClick={() => {
+            const matches = skills.filter(s => s.id.includes('web') || s.id.includes('search') || s.id.includes('api') || s.id.includes('crawl')).map(s => s.id);
+            setSelected(new Set(matches.slice(0, 3)));
+          }}
+          title="Select Web Research & API skills"
+        >
+          🌐 Web & Research
+        </button>
+        <button
+          className="mem-btn mem-btn-sm"
+          onClick={() => {
+            const matches = skills.filter(s => s.id.includes('orchestrat') || s.id.includes('workflow') || s.id.includes('verify')).map(s => s.id);
+            setSelected(new Set(matches.slice(0, 3)));
+          }}
+          title="Select Autonomous Orchestration skills"
+        >
+          🤖 Orchestration
+        </button>
       </div>
 
       {error && <div className="mem-error-box">{error}</div>}
@@ -134,14 +180,55 @@ export default function SkillsTab({ onUseInChat, onViewInGraph }: Props) {
             <XCircle size={13} /> Clear
           </button>
           <button
-            className="mem-btn mem-btn-primary"
+            className="mem-btn"
             disabled={selected.size === 0 || !report?.ok}
             onClick={() => onUseInChat([...selected])}
+            title="Open chat with these skills in current project"
           >
-            <MessageSquarePlus size={13} /> Use in new chat
+            <MessageSquarePlus size={13} /> Use in Chat
           </button>
         </div>
       </div>
+
+      {/* Skills-First Project Creation Flow */}
+      {onCreateProjectWithSkills && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '10px 14px',
+          background: 'rgba(30, 41, 59, 0.95)',
+          borderTop: '1px solid #334155',
+          borderRadius: '0 0 10px 10px',
+        }}>
+          <FolderPlus size={15} color="#818cf8" style={{ flexShrink: 0 }} />
+          <input
+            className="mem-input"
+            style={{ flex: 1, padding: '7px 12px', fontSize: '12px' }}
+            placeholder={
+              selected.size > 0
+                ? `Enter project name to build with ${selected.size} skill(s) (e.g. Analytics Pipeline)…`
+                : "Select skills above to create a skill-powered project…"
+            }
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && projectName.trim() && selected.size > 0 && report?.ok) {
+                onCreateProjectWithSkills(projectName.trim(), [...selected]);
+              }
+            }}
+          />
+          <button
+            className="mem-btn mem-btn-primary"
+            disabled={selected.size === 0 || !report?.ok || !projectName.trim()}
+            onClick={() => onCreateProjectWithSkills(projectName.trim(), [...selected])}
+            title="Create a new dedicated project initialized with these skills and immediately open chat"
+            style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px' }}
+          >
+            <Rocket size={13} /> Create Project & Open Chat →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

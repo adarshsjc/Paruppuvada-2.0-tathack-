@@ -123,7 +123,19 @@ def graph_search(q: str, types: Optional[str] = None, project_id: Optional[str] 
 
 @router.get("/api/v1/memory-graph/stats")
 def graph_stats():
-    return get_graph_store().stats()
+    st = get_graph_store().stats()
+    try:
+        from app.skills.library import all_capabilities
+        st["skills"] = len(all_capabilities())
+    except Exception:
+        pass
+    try:
+        from app.memory.sqlite import get_memory_provider
+        st["memories"] = len(get_memory_provider().list_memory())
+        st["projects"] = len(get_memory_provider().list_projects())
+    except Exception:
+        pass
+    return st
 
 
 # ---------------------------------------------------------------- skills

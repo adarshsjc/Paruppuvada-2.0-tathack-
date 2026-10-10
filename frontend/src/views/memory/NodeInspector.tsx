@@ -82,9 +82,23 @@ export default function NodeInspector({
   return (
     <div className="mem-inspector">
       <div className="mem-inspector-head">
-        <span className="mem-dot" style={{ background: node ? NODE_COLORS[node.node_type] : '#94a3b8' }} />
-        <strong className="mem-inspector-title">{node?.label ?? 'Loading…'}</strong>
-        <button className="mem-icon-btn" onClick={onClose} title="Close inspector"><X size={15} /></button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+          <span
+            className="mem-dot"
+            style={{
+              background: node ? NODE_COLORS[node.node_type] : '#94a3b8',
+              boxShadow: node ? `0 0 10px ${NODE_COLORS[node.node_type]}` : 'none',
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              flexShrink: 0,
+            }}
+          />
+          <strong className="mem-inspector-title" style={{ fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {node?.label ?? 'Loading…'}
+          </strong>
+        </div>
+        <button className="mem-icon-btn" onClick={onClose} title="Close inspector"><X size={16} /></button>
       </div>
 
       {error && <div className="mem-error-box">{error}</div>}
@@ -99,6 +113,25 @@ export default function NodeInspector({
             <span className={`mem-chip mem-state-${node.compression_state.toLowerCase()}`}>
               {node.compression_state.replace('_', ' ')}
             </span>
+          </div>
+
+          {/* Importance / Cognitive Weight Meter */}
+          <div className="mem-importance-wrap">
+            <div className="mem-importance-head">
+              <span>Cognitive Importance</span>
+              <strong style={{ color: NODE_COLORS[node.node_type] || '#38bdf8' }}>
+                {Math.round(node.importance * 100)}%
+              </strong>
+            </div>
+            <div className="mem-importance-track">
+              <div
+                className="mem-importance-fill"
+                style={{
+                  width: `${Math.max(8, Math.min(100, Math.round(node.importance * 100)))}%`,
+                  background: `linear-gradient(90deg, #38bdf8, ${NODE_COLORS[node.node_type] || '#818cf8'})`,
+                }}
+              />
+            </div>
           </div>
 
           {node.description && <p className="mem-inspector-desc">{node.description}</p>}

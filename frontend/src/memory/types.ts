@@ -99,6 +99,9 @@ export interface GraphStats {
   events?: number;
   tasks?: number;
   failures?: number;
+  skills?: number;
+  memories?: number;
+  projects?: number;
   [k: string]: unknown;
 }
 
