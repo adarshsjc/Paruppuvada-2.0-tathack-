@@ -9,7 +9,8 @@ from app.agents.llm import get_llm
 from app.config import settings
 from app.memory.base import MemoryItem
 from app.memory.sqlite import get_memory_provider
-from app.models.schemas import CandidateSelection, ReviewResult, TaskState
+from app.models.schemas import CandidateSelection, ReviewResult, TaskState, Plan, Step
+from app.skills.library import capability_by_id
 from app.tools.web_search import search_web
 
 AGENT_COUNT = 3
@@ -47,13 +48,40 @@ def _agent_models(llm) -> List[str]:
     return [settings.ollama_model] * AGENT_COUNT
 
 
-def run_parallel_workflow(request: str, project_id: str = None) -> TaskState:
+def run_parallel_workflow(request: str, project_id: str = None, selected_skills: List[str] = None) -> TaskState:
     llm = get_llm()
     provider = get_memory_provider()
     state = TaskState(task_id=str(uuid.uuid4()), request=request, status="running")
 
     memories = provider.search_memory(request, project_id=project_id)
     execution_context: Dict[str, object] = {}
+
+    # Incorporate selected skills guidance into execution context
+    skills_context = ""
+    resolved_skills = []
+    if selected_skills:
+        skill_lines = []
+        for sid in selected_skills:
+            cap = capability_by_id(sid)
+            if cap:
+                resolved_skills.append({"id": cap.id, "name": cap.name, "category": cap.category_id})
+                tools_str = ", ".join(cap.allowed_tools)
+                line = f"- {cap.name} ({cap.id}): {cap.description}"
+                if cap.instructions:
+                    line += f" | Guidance: {cap.instructions}"
+                if tools_str:
+                    line += f" | Tools: {tools_str}"
+                skill_lines.append(line)
+            else:
+                resolved_skills.append({"id": sid, "name": sid})
+                skill_lines.append(f"- {sid}")
+        if skill_lines:
+            skills_context = "Active Loaded Skills for this Task:\n" + "\n".join(skill_lines)
+            execution_context["active_skills"] = resolved_skills
+            state.plan = Plan(steps=[
+                Step(id=1, goal=f"Autonomous Multi-Agent execution utilizing {len(resolved_skills)} active skills", expected_output="Synthesized, verified solution honoring configured skills")
+            ])
+
     memory_context = "\n".join(f"[{item.type}] {item.content}" for item in memories)
     web_results: List[Dict[str, str]] = []
     if settings.web_search_enabled and not memories:
@@ -63,7 +91,14 @@ def run_parallel_workflow(request: str, project_id: str = None) -> TaskState:
         except requests.RequestException as exc:
             execution_context["web_search_error"] = f"Public web search failed: {exc}"
 
-    context_parts = [memory_context] if memory_context else ["No relevant memory found."]
+    context_parts = []
+    if skills_context:
+        context_parts.append(skills_context)
+    if memory_context:
+        context_parts.append(f"Relevant project memory:\n{memory_context}")
+    else:
+        context_parts.append("Relevant project memory:\nNo relevant memory found.")
+
     if web_results:
         sources = "\n".join(
             f"- {result['title']} ({result['url']}): {result['snippet']}"
@@ -84,7 +119,7 @@ def run_parallel_workflow(request: str, project_id: str = None) -> TaskState:
             f"Your distinct approach: {role['instruction']}\n"
             "Work independently; do not imitate or refer to another agent. Do not claim to have "
             "performed actions you cannot perform.\n\n"
-            f"User request:\n{request}\n\nRelevant project memory:\n{context}"
+            f"User request:\n{request}\n\n{context}"
         )
         return agent_number, model, llm.generate_text(prompt, model=model)
 

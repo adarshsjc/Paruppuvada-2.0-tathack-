@@ -24,6 +24,7 @@ class TaskResponse(BaseModel):
 
 class ProjectCreate(BaseModel):
     name: str
+    selected_skills: Optional[List[str]] = None
 
 @router.get("/health")
 def health_check():
@@ -59,9 +60,30 @@ def health_check():
 @router.post("/api/v1/projects", response_model=Project)
 def create_project(data: ProjectCreate):
     try:
-        return get_memory_provider().create_project(data.name)
+        project = get_memory_provider().create_project(data.name)
+        if data.selected_skills:
+            import json
+            get_memory_provider().add_memory(MemoryItem(
+                project_id=project.id,
+                type="project_skills",
+                content=json.dumps(data.selected_skills),
+                source="project_init",
+                tags=["skills", "configuration"]
+            ))
+        return project
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/api/v1/projects/{project_id}/skills")
+def get_project_skills(project_id: str):
+    items = get_memory_provider().list_memory(project_id, type="project_skills")
+    if items:
+        import json
+        try:
+            return {"skills": json.loads(items[-1].content)}
+        except Exception:
+            pass
+    return {"skills": []}
 
 @router.get("/api/v1/projects", response_model=List[Project])
 def list_projects():
@@ -91,7 +113,11 @@ def create_task(request: TaskRequest):
     try:
         # Complex mode: full multi-agent ensemble with memory retrieval, DAG execution, and review
         if request.mode and request.mode.strip().lower() == "complex":
-            state = run_parallel_workflow(request.description, project_id=request.project_id)
+            state = run_parallel_workflow(
+                request.description, 
+                project_id=request.project_id,
+                selected_skills=request.selected_skills
+            )
             return TaskResponse(status=state.status, result=state.final_result or "", details=state.model_dump())
 
         # Simple mode: fast terminal-style direct response from local Qwen 2.5:3B without agent/memory delay
@@ -99,6 +125,18 @@ def create_task(request: TaskRequest):
         result_text = llm.generate_text(request.description)
         result_text = result_text.strip() if result_text else "No response generated."
         model_name = getattr(llm, "model", settings.ollama_model)
+
+        step_data = {
+            "mode": "simple",
+            "model": model_name,
+            "action": {
+                "thought": "Terminal-style direct response without multi-agent ensemble or memory overhead.",
+                "tool": "none"
+            },
+            "tool_result": result_text
+        }
+        if request.selected_skills:
+            step_data["active_skills"] = request.selected_skills
 
         state = TaskState(
             task_id=str(uuid.uuid4()),
@@ -113,15 +151,7 @@ def create_task(request: TaskRequest):
                 approved=True,
                 feedback=f"Direct response from {model_name} in Simple Mode (fast terminal mode, no multi-agent delay)."
             ),
-            execution_steps=[{
-                "mode": "simple",
-                "model": model_name,
-                "action": {
-                    "thought": "Terminal-style direct response without multi-agent ensemble or memory overhead.",
-                    "tool": "none"
-                },
-                "tool_result": result_text
-            }]
+            execution_steps=[step_data]
         )
         return TaskResponse(status="completed", result=result_text, details=state.model_dump())
     except Exception as e:

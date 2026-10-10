@@ -279,6 +279,75 @@ SKILLS: List[SkillManifest] = [
         instructions="Extract minimal error signatures and map them to actionable retry strategies.",
         importance=0.85,
     ),
+    # --- Advanced Data Analysis & API Skills ---
+    SkillManifest(
+        id="skill:data-analysis", name="Data Analysis & Charting", category_id="cat:core-utilities",
+        description="Analyzes tabular datasets, computes distributions, trends, correlations, and statistical summaries.",
+        prerequisites=["skill:calculation"], allowed_tools=["analyze_data", "calculator"],
+        inputs=[{"name": "dataset", "type": "string"}],
+        outputs=[{"name": "analysis_summary", "type": "object"}],
+        verification_rules=["rule:data_validated"],
+        keywords=["data", "statistics", "trend", "summary", "chart", "metrics", "distribution", "correlation"],
+        instructions="Compute exact descriptive metrics (mean, median, range, std dev) and surface meaningful trends.",
+        importance=0.8,
+    ),
+    SkillManifest(
+        id="skill:api-client", name="REST API Client", category_id="cat:core-utilities",
+        description="Constructs, executes, and validates REST HTTP requests and parses structured JSON API payloads.",
+        prerequisites=[], allowed_tools=["http_request"],
+        inputs=[{"name": "url", "type": "string"}, {"name": "method", "type": "string"}],
+        outputs=[{"name": "response_json", "type": "object"}],
+        verification_rules=["rule:schema_compliant"],
+        keywords=["api", "http", "rest", "endpoint", "request", "post", "get", "json", "webhook"],
+        instructions="Format HTTP request headers, inspect response status codes, and parse response payloads safely.",
+        importance=0.75,
+    ),
+    # --- Git Ops & Code Documentation Skills ---
+    SkillManifest(
+        id="skill:git-ops", name="Git Version Control", category_id="cat:code-engineering",
+        description="Inspects Git repository branches, commit histories, uncommitted modifications, and diff trees.",
+        prerequisites=["skill:file-inspection"], allowed_tools=["git_status", "read_file"],
+        inputs=[{"name": "repo_path", "type": "string"}],
+        outputs=[{"name": "git_summary", "type": "string"}],
+        verification_rules=[],
+        keywords=["git", "branch", "commit", "diff", "repo", "vcs", "stash", "log", "history"],
+        instructions="Audit Git state, verify active branch and modified files before performing operations.",
+        importance=0.8,
+    ),
+    SkillManifest(
+        id="skill:doc-generation", name="Documentation Generation", category_id="cat:code-engineering",
+        description="Scans workspace code modules and type schemas to synthesize comprehensive Markdown documentation.",
+        prerequisites=["skill:file-inspection"], allowed_tools=["generate_docs", "write_file"],
+        inputs=[{"name": "source_path", "type": "string"}],
+        outputs=[{"name": "docs_markdown", "type": "file"}],
+        verification_rules=["rule:docs_complete", "rule:file_exists"],
+        keywords=["docs", "documentation", "readme", "markdown", "guide", "api docs", "comments", "types"],
+        instructions="Document all exposed functions, parameters, return signatures, and usage patterns.",
+        importance=0.8,
+    ),
+    # --- Knowledge Synthesis & Semantic Linking Skills ---
+    SkillManifest(
+        id="skill:concept-linking", name="Concept Knowledge Linking", category_id="cat:knowledge-memory",
+        description="Discovers semantic associations and relationship edges across memories, project notes, and concepts.",
+        prerequisites=["skill:memory-search"], allowed_tools=["link_concepts", "save_memory"],
+        inputs=[{"name": "concept_a", "type": "string"}, {"name": "concept_b", "type": "string"}],
+        outputs=[{"name": "relationship", "type": "string"}],
+        verification_rules=[],
+        keywords=["concept", "link", "graph", "relation", "connect", "knowledge", "semantic", "entity"],
+        instructions="Formulate clear relationship descriptors between entities and persist associative memory edges.",
+        importance=0.75,
+    ),
+    SkillManifest(
+        id="skill:competitive-benchmarking", name="Competitive Benchmarking", category_id="cat:web-research",
+        description="Gathers and benchmarks competitor capabilities, feature matrices, and architecture trade-offs from the web.",
+        prerequisites=["skill:web-search"], allowed_tools=["benchmark_comparison", "web_search"],
+        inputs=[{"name": "subjects", "type": "list"}],
+        outputs=[{"name": "benchmark_matrix", "type": "object"}],
+        verification_rules=["rule:sources_cited"],
+        keywords=["benchmark", "comparison", "matrix", "features", "competitive", "analysis", "competitors"],
+        instructions="Synthesize objective tabular comparisons with verifiable external citations.",
+        importance=0.85,
+    ),
 ]
 
 WORKFLOWS = [
@@ -315,6 +384,22 @@ WORKFLOWS = [
         "description": "Decompose high-level goal, solve concurrently via parallel agents, judge best candidate, and learn from mistakes.",
         "skill_ids": ["skill:task-decomposition", "skill:parallel-ensemble", "skill:judge-evaluation", "skill:failure-reflection"],
         "importance": 0.95,
+    },
+    {
+        "id": "workflow:api-integration",
+        "name": "API Integration & Validation",
+        "category_id": "cat:core-utilities",
+        "description": "Construct REST requests, execute API client calls, and validate schema compliance.",
+        "skill_ids": ["skill:api-client", "skill:calculation", "skill:data-analysis"],
+        "importance": 0.88,
+    },
+    {
+        "id": "workflow:doc-synthesis",
+        "name": "Knowledge & Code Documentation",
+        "category_id": "cat:code-engineering",
+        "description": "Inspect project code, link memory concepts, and generate structured API documentation.",
+        "skill_ids": ["skill:file-inspection", "skill:doc-generation", "skill:concept-linking"],
+        "importance": 0.90,
     },
 ]
 
@@ -365,6 +450,12 @@ VERIFICATION_RULES = [
      "description": "All automated unit tests execute with zero failures."},
     {"id": "rule:judge_consensus", "name": "Judge consensus",
      "description": "Winning candidate is verified by multi-criteria rubric scoring."},
+    {"id": "rule:data_validated", "name": "Data validated",
+     "description": "Reported statistics and metrics match the dataset precisely."},
+    {"id": "rule:schema_compliant", "name": "Schema compliant",
+     "description": "Payload adheres to JSON/API schema specifications."},
+    {"id": "rule:docs_complete", "name": "Documentation complete",
+     "description": "All public functions and endpoints have complete descriptions."},
 ]
 
 _TOOL_DESCRIPTIONS = {
@@ -388,6 +479,12 @@ _TOOL_DESCRIPTIONS = {
     "ensemble_solve": "Execute parallel candidate solvers across independent agent perspectives",
     "judge_selection": "Critically evaluate candidate solutions and pick the optimal output",
     "record_failure": "Document execution failure modes and index recovery paths",
+    "analyze_data": "Compute summary statistics, trends, and distribution metrics",
+    "http_request": "Dispatch and inspect REST HTTP requests and parse response payloads",
+    "git_status": "Inspect Git branch status, diffs, and commit history",
+    "generate_docs": "Synthesize markdown documentation for APIs, classes, and modules",
+    "link_concepts": "Create semantic relationship links between knowledge nodes",
+    "benchmark_comparison": "Compile structured feature and capability comparison tables",
 }
 
 SKILL_BY_ID: Dict[str, SkillManifest] = {s.id: s for s in SKILLS}
