@@ -1,0 +1,128 @@
+================================================================================
+OPEN CHAT - AUTONOMOUS AGENTIC AI PLATFORM
+PROJECT DOCUMENTATION & REPOSITORY OVERVIEW
+================================================================================
+
+PROJECT NAME: Open Chat / Stratify AI Platform
+REPOSITORY: Paruppuvada-2.0-tathack-
+FRAMEWORK: Multi-Agent Autonomous Orchestration with Graph-Based Memory & Skills
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+Open Chat is an enterprise-grade autonomous multi-agent platform designed to 
+execute complex tasks, maintain long-term contextual memory, prevent hallucinations 
+through built-in verification, and visualize project knowledge in an interactive 
+3D cyber-deck workspace.
+
+The system solves key challenges in current AI workflows:
+- Context loss across sessions via SQLite RAG & Graphify memory networks.
+- Inflexible latencies through a Dual Execution Architecture.
+- Unsupported/hallucinated answers through automated Multi-Agent Judge Rubrics.
+- Security vulnerabilities via Human-in-the-Loop & Prompt-Injection Safeguards.
+
+--------------------------------------------------------------------------------
+2. SYSTEM ARCHITECTURE
+--------------------------------------------------------------------------------
+
+A. DUAL-MODE EXECUTION ENGINE
+-----------------------------
+1. SIMPLE MODE (Instant Terminal Inference):
+   - Fast proxy to local Qwen 2.5 LLM via Ollama.
+   - Bypasses multi-agent deliberation for ~1–2 second instant responses.
+   - Optimized for rapid Q&A, standard math, and everyday conversational queries.
+
+2. COMPLEX MODE (Full Multi-Agent Deliberation Loop):
+   - Step 1: Memory & Goal Planning (Context retrieval from SQLite memory).
+   - Step 2: Parallel Ensemble Dispatch:
+       * Direct Solver (concise pragmatic execution)
+       * Critical Thinker (edge-case analysis & scrutiny)
+       * Research Synthesizer (evidence gathering & deep context)
+   - Step 3: Judge Evaluation & Verification (Scoring rubric to pick optimal output).
+   - Step 4: Knowledge Graph & Memory Write-back (Persistent learning across projects).
+
+B. REUSABLE SKILLS REGISTRY (24 Capabilities Across 6 Domains)
+--------------------------------------------------------------
+- Core Utilities: Calculation, String Ops, File Sandbox, System Shell.
+- Knowledge & Memory: Graphify RAG, SQLite Memory, Concept Linking, Failure Extraction.
+- Web Research: Live Web Search, Content Extraction, Fact Checking, Benchmarking.
+- Verification & Quality: Code Linting, Unit Test Runner, Security Audit.
+- Architecture & Synthesis: DAG Planner, Multi-Agent Ensemble, Doc Generation.
+- Analysis & Integration: Data Analysis & Charting, REST API Client, Git Ops.
+
+C. 3D & 2D KNOWLEDGE GRAPH ENGINE
+---------------------------------
+- SQLite-backed graph store initialized with 73 nodes and 95 relationship edges.
+- Relationship types: CONTAINS, CALLS, REQUIRES, VERIFIED_BY.
+- Interactive WebGL 3D Force-Directed visualizer with camera controls, node 
+  inspector panels, and category color-coding.
+
+--------------------------------------------------------------------------------
+3. TECH STACK & COMPONENTS
+--------------------------------------------------------------------------------
+Backend:
+  - Language & Framework: Python 3.12, FastAPI, Uvicorn (ASGI)
+  - Data Storage: SQLite3 (RAG text memory + Graph store), Pydantic v2
+  - LLM Provider: Ollama (Local Qwen 2.5 3B / 7B) + OpenRouter + MockLLM fallback
+  - Testing & Quality: Pytest, HTTPX
+
+Frontend:
+  - Framework: React 19, TypeScript, Vite
+  - Styling: Stratify Cyber-Deck CSS Design System
+  - Visualizations: 3D Force Graph (Three.js/WebGL), Lucide Icons
+
+Desktop & DevOps:
+  - Windows Batch Launchers (start_app.bat, start_mock.bat)
+  - PyInstaller Standalone Launcher (OpenChat.exe)
+  - Secondary Drive Storage offloading (E:\ollama\models) for high performance
+
+--------------------------------------------------------------------------------
+4. REPOSITORY FILE STRUCTURE
+--------------------------------------------------------------------------------
+Paruppuvada-2.0-tathack-/
+├── backend/
+│   ├── app/
+│   │   ├── agents/          # Multi-agent ensemble, judge, and LLM providers
+│   │   ├── api/             # FastAPI REST endpoints & task streaming
+│   │   ├── memory/          # SQLite memory provider & Graphify store
+│   │   ├── skills/          # 24-skill capability library & metadata
+│   │   ├── tools/           # Safe sandboxed execution tools
+│   │   ├── config.py        # Centralized settings & environment manager
+│   │   └── main.py          # FastAPI application entry point
+│   ├── requirements.txt     # Python backend dependencies
+│   └── run_mock.py          # Standalone zero-cost mock runner
+├── frontend/
+│   ├── src/
+│   │   ├── views/           # ChatWorkspace, ProjectSelector, MemoryGraph, Settings
+│   │   ├── components/      # UI components & 3D Force Graph visualizer
+│   │   ├── api.ts           # REST API client interface
+│   │   └── App.tsx          # Root application router
+│   ├── package.json         # Node.js dependencies
+│   └── vite.config.ts       # Vite bundler configuration
+├── launcher/
+│   ├── openchat_launcher.py # Desktop launcher controller
+│   └── build_launcher.ps1   # PyInstaller build automation
+├── start_app.bat            # One-click Windows application startup script
+├── start_mock.bat           # One-click offline mock mode script
+├── OpenChat.exe             # Compiled standalone desktop executable
+├── PROJECT_OVERVIEW.txt     # Complete project documentation file
+└── CONTRIBUTION_SUMMARY.txt # Development and contribution log
+
+--------------------------------------------------------------------------------
+5. QUICK START INSTRUCTIONS
+--------------------------------------------------------------------------------
+Method A: Automated One-Click Launch
+  Double-click `start_app.bat`
+
+Method B: Manual Terminal Execution
+  1. Start Backend:
+     cd backend
+     .\venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+  2. Start Frontend:
+     cd frontend
+     npm run dev -- --host 127.0.0.1 --port 5173
+
+  3. Open in Browser:
+     http://127.0.0.1:5173
+================================================================================
