@@ -8,7 +8,7 @@ _ROOT_ENV = os.path.join(_ROOT_DIR, ".env")
 
 
 class Settings(BaseSettings):
-    # Set to False so real Ollama Qwen2.5:3B is used by default
+    # Set to False so real Ollama Qwen2.5:7B is used by default
     use_mock_llm: bool = False
 
     # Provider selector: 'ollama', 'openrouter', 'gemini'
@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     # Ollama (local) Integration — single model reused sequentially for all roles.
     ollama_base_url: str = "http://localhost:11434/v1"
-    ollama_model: str = "qwen2.5:3b"
+    ollama_model: str = "qwen2.5:7b"
 
     # OpenRouter API Integration
     openrouter_api_key: str = ""

@@ -120,7 +120,7 @@ def create_task(request: TaskRequest):
             )
             return TaskResponse(status=state.status, result=state.final_result or "", details=state.model_dump())
 
-        # Simple mode: fast terminal-style direct response from local Qwen 2.5:3B without agent/memory delay
+        # Simple mode: fast terminal-style direct response from local Qwen 2.5:7B without agent/memory delay
         llm = get_llm()
         result_text = llm.generate_text(request.description)
         result_text = result_text.strip() if result_text else "No response generated."

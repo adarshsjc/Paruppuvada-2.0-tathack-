@@ -147,6 +147,15 @@ CREATE TABLE IF NOT EXISTS rag_chunks (
     created_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_chunks_doc ON rag_chunks(document_id);
+
+-- User conversations persist server-side (scope = project id or 'global') so the
+-- chat history survives page reloads, browser restarts and origin changes
+-- (e.g. http://localhost:5173 vs http://127.0.0.1:5173).
+CREATE TABLE IF NOT EXISTS conversations (
+    scope TEXT PRIMARY KEY,
+    messages_json TEXT NOT NULL DEFAULT '[]',
+    updated_at TEXT
+);
 """
 
 
@@ -346,6 +355,38 @@ class GraphStore:
         with self._write_lock, self._conn() as conn:
             cur = conn.execute("DELETE FROM graph_edges WHERE id = ?", (eid,))
             return cur.rowcount > 0
+
+    # --- conversations (persisted server-side; see store docstring) -----------
+    def get_conversation(self, scope: str) -> Optional[Dict[str, Any]]:
+        """Return the persisted conversation for a scope (project id or 'global')."""
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT scope, messages_json, updated_at FROM conversations WHERE scope = ?",
+                (scope,),
+            ).fetchone()
+        if not row:
+            return None
+        return {
+            "scope": row["scope"],
+            "messages": json.loads(row["messages_json"] or "[]"),
+            "updated_at": row["updated_at"],
+        }
+
+    def save_conversation(self, scope: str, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Persist a conversation (idempotent replace). Capped to the last 200
+        messages so a long session cannot grow the row without bound."""
+        now = utcnow().isoformat()
+        payload = json.dumps(messages[-200:], default=str)
+        with self._write_lock, self._conn() as conn:
+            conn.execute(
+                """INSERT INTO conversations (scope, messages_json, updated_at)
+                   VALUES (?,?,?)
+                   ON CONFLICT(scope) DO UPDATE SET
+                     messages_json=excluded.messages_json,
+                     updated_at=excluded.updated_at""",
+                (scope, payload, now),
+            )
+        return {"scope": scope, "count": len(messages), "updated_at": now}
 
     # --- overview & bounded traversal ------------------------------------------
     def overview(self, project_id: Optional[str] = None) -> Dict[str, Any]:

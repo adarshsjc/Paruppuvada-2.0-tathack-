@@ -67,6 +67,12 @@ def seed(db_path: str = None, workspace: str = None) -> dict:
     with open(csv_path, "w", encoding="utf-8", newline="") as f:
         f.write(SALES_CSV)
 
+    # memory management is driven by the project's CSV files: mirror sales.csv
+    # into the graph (document -> CONTAINS -> knowledge chunks)
+    from app.rag.ingest import ingest_file
+    csv_doc = ingest_file(csv_path, None, store, db_path=settings.memory_db_path)
+    counts_by_file = {"sales.csv": csv_doc}
+
     # knowledge document (ingested into RAG + graph)
     doc = ingest_text("sales-reporting-guide.md", SALES_KNOWLEDGE_MD, None, store,
                       source_label="seed:guide")
@@ -92,7 +98,8 @@ def seed(db_path: str = None, workspace: str = None) -> dict:
     store.upsert_edge("cat:data-reporting", "recovery:aggregate-empty-value",
                       EdgeType.CONTAINS, Provenance.EXPLICIT)
 
-    return {"graph": counts, "document": doc, "workspace": ws,
+    return {"graph": counts, "document": doc, "csv": counts_by_file,
+            "workspace": ws,
             "expected_totals": {"Widget A": 1590.75, "Widget B": 1275.60,
                                 "Gadget C": 2799.99, "total": 5666.34}}
 

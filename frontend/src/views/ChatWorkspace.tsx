@@ -29,6 +29,42 @@ interface Message {
   mode?: 'simple' | 'complex';
 }
 
+/* ---- Persistent conversation -------------------------------------------------
+   The conversation is saved per project (key = projectId, or 'global' when no
+   project). It is restored automatically whenever the workspace remounts or the
+   selected project changes, and it is ONLY wiped when the user presses the
+   explicit "Clear" button in the Open Chat header.
+   ---------------------------------------------------------------------------- */
+const CONVERSATION_STORAGE_PREFIX = 'openchat:conversation:v1:';
+
+function conversationScope(projectId: string): string {
+  const scope = (projectId || 'global').trim();
+  return scope || 'global';
+}
+
+function conversationKey(projectId: string): string {
+  return `${CONVERSATION_STORAGE_PREFIX}${conversationScope(projectId)}`;
+}
+
+function loadConversation(projectId: string): Message[] | null {
+  try {
+    const raw = localStorage.getItem(conversationKey(projectId));
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed as Message[];
+  } catch {
+    /* corrupt or blocked storage — fall through to the default greeting */
+  }
+  return null;
+}
+
+const WELCOME_MESSAGE: Message = {
+  role: 'agent',
+  content: "Hello! I'm Open Chat, powered by local Qwen 2.5:7B on Ollama. Choose 'Simple' mode for instant terminal-style answers, or 'Complex' mode to use persistent memory, parallel agents, and verification.",
+  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  mode: 'simple'
+};
+
 export default function ChatWorkspace({ 
   projectId,
   initialPrompt,
@@ -44,14 +80,9 @@ export default function ChatWorkspace({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [chatMode, setChatMode] = useState<'simple' | 'complex'>('simple');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'agent',
-      content: "Hello! I'm Open Chat, powered by local Qwen 2.5:3B on Ollama. Choose 'Simple' mode for instant terminal-style answers, or 'Complex' mode to use persistent memory, parallel agents, and verification.",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      mode: 'simple'
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>(() =>
+    loadConversation(projectId) ?? [WELCOME_MESSAGE]
+  );
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [elapsedTimer, setElapsedTimer] = useState(0);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -60,6 +91,27 @@ export default function ChatWorkspace({
   
   const [currentSkills, setCurrentSkills] = useState<string[]>(selectedSkills || []);
   const [isSkillModalOpen, setIsSkillModalOpen] = useState(false);
+
+  // Which project's conversation is currently loaded (the component stays
+  // mounted across project switches, so reload when the project changes).
+  const loadedConversationRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const key = conversationKey(projectId);
+    if (loadedConversationRef.current === key) return;
+    loadedConversationRef.current = key;
+    setMessages(loadConversation(projectId) ?? [WELCOME_MESSAGE]);
+  }, [projectId]);
+
+  // Persist after every change — the conversation is never auto-cleared.
+  useEffect(() => {
+    try {
+      // Keep the last 100 messages to stay well within localStorage quotas.
+      localStorage.setItem(conversationKey(projectId), JSON.stringify(messages.slice(-100)));
+    } catch {
+      /* storage full / disabled — keep the conversation in memory only */
+    }
+  }, [messages, projectId]);
 
   useEffect(() => {
     if (selectedSkills && selectedSkills.length > 0) {
@@ -176,7 +228,7 @@ export default function ChatWorkspace({
                 <h2 className="chat-header-title">Open Chat Workspace</h2>
                 <span className="service-badge service-online" style={{ fontSize: '10px', padding: '2px 8px' }}>
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
-                  Qwen2.5:3B (Ollama Local)
+                  Qwen2.5:7B (Ollama Local)
                 </span>
               </div>
               <span style={{ fontSize: '11px', color: '#64748b' }}>
@@ -211,7 +263,7 @@ export default function ChatWorkspace({
                   boxShadow: chatMode === 'simple' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
                   cursor: 'pointer'
                 }}
-                title="Simple Mode: Fast direct response with local Qwen 2.5:3B (~1-2s)"
+                title="Simple Mode: Fast direct response with local Qwen 2.5:7B (~1-2s)"
               >
                 <Zap size={13} color="#f59e0b" />
                 <span>Simple</span>
@@ -251,12 +303,16 @@ export default function ChatWorkspace({
             <button 
               className="btn-ghost-outline" 
               style={{ padding: '6px 10px', fontSize: '11px' }}
-              onClick={() => setMessages([{
-                role: 'agent',
-                content: "Open Chat conversation reset. How can I assist you now?",
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                mode: chatMode
-              }])}
+              onClick={() => {
+                // Explicit user action: clear this project's saved conversation.
+                try { localStorage.removeItem(conversationKey(projectId)); } catch { /* ignore */ }
+                setMessages([{
+                  role: 'agent',
+                  content: "Open Chat conversation reset. How can I assist you now?",
+                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  mode: chatMode
+                }]);
+              }}
               title="Clear chat session"
             >
               <Trash2 size={13} /> Clear
@@ -357,7 +413,7 @@ export default function ChatWorkspace({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '12px', color: '#b45309', fontWeight: 600 }}>
                   <Loader2 size={14} className="spinner" color="#f59e0b" />
-                  Simple Mode: Direct Qwen 2.5:3B terminal response (no memory wait)...
+                  Simple Mode: Direct Qwen 2.5:7B terminal response (no memory wait)...
                 </span>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#b45309', fontWeight: 600 }}>
                   {elapsedTimer}s
@@ -441,7 +497,7 @@ export default function ChatWorkspace({
               <Loader2 size={16} className="spinner" color={chatMode === 'simple' ? '#f59e0b' : '#2563eb'} />
               <span style={{ fontSize: '13px', color: '#475569' }}>
                 {chatMode === 'simple'
-                  ? '⚡ Qwen 2.5:3B is answering directly (Simple mode)...'
+                  ? '⚡ Qwen 2.5:7B is answering directly (Simple mode)...'
                   : '🧠 Open Chat is searching memory and synthesizing multi-agent solutions...'}
               </span>
             </div>
@@ -587,7 +643,7 @@ export default function ChatWorkspace({
               onChange={e => setInput(e.target.value)}
               placeholder={
                 chatMode === 'simple'
-                  ? "Ask Qwen 2.5:3B directly (Fast terminal reply without memory wait)..."
+                  ? "Ask Qwen 2.5:7B directly (Fast terminal reply without memory wait)..."
                   : "Ask Open Chat complex task (Searches memory, 3-agent ensemble, DAG verification)..."
               }
               disabled={loading}
@@ -676,7 +732,7 @@ export default function ChatWorkspace({
                       <div className="trace-card-top">
                         {step.mode === 'simple' ? (
                           <span className="step-agent-badge" style={{ backgroundColor: '#fffbeb', color: '#b45309' }}>
-                            ⚡ Simple Mode · Direct Qwen 2.5:3B
+                            ⚡ Simple Mode · Direct Qwen 2.5:7B
                           </span>
                         ) : (
                           <span className="step-agent-badge badge-executor">

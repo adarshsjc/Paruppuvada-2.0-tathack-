@@ -69,7 +69,7 @@ export default function Settings() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
             {[
-              { id: 'ollama', name: 'Ollama (Local)', tag: 'Privacy · Zero Cost', desc: 'Local Qwen2.5:3B via Ollama — no cloud, no API key', active: pingResult?.provider === 'ollama' },
+              { id: 'ollama', name: 'Ollama (Local)', tag: 'Privacy · Zero Cost', desc: 'Local Qwen2.5:7B via Ollama — no cloud, no API key', active: pingResult?.provider === 'ollama' },
               { id: 'openrouter', name: 'OpenRouter Free Router', tag: 'Cloud · Dynamic', desc: 'Auto-routes to the best free tier cloud LLM', active: pingResult?.provider === 'openrouter' },
               { id: 'gemini', name: 'Gemini Direct', tag: 'Cloud · Fast', desc: 'Google Gemini API with low-latency streaming', active: pingResult?.provider === 'gemini' },
               { id: 'mock', name: 'Mock Engine (Offline)', tag: 'Zero Latency', desc: 'Deterministic offline simulation for testing', active: pingResult?.provider === 'mock' },
