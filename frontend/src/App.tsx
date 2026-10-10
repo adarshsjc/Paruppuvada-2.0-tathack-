@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   FolderKanban, 
   Database, 
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import './App.css';
 import type { Project } from './types';
-import { fetchProjects, pingBackend } from './api';
+import { fetchHealth, fetchProjects, pingBackend } from './api';
 
 import DashboardView from './views/DashboardView';
 import ChatWorkspace from './views/ChatWorkspace';
@@ -31,25 +31,46 @@ function App() {
   const [pendingPrompt, setPendingPrompt] = useState<string>('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [backendInfo, setBackendInfo] = useState<{ provider?: string; model?: string }>({});
+  const [apiHealth, setApiHealth] = useState<{ llm_mode: string; agent_count: number } | null>(null);
   const [selectedSkills, setSelectedSkills] = useState<string[] | undefined>(undefined);
 
-  useEffect(() => {
-    loadProjects();
-    // Fetch active provider info on mount
-    pingBackend().then(info => setBackendInfo({ provider: info.provider, model: info.model })).catch(() => {});
-  }, []);
-
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       const projs = await fetchProjects();
       setProjects(projs);
-      if (projs.length > 0 && !selectedProjectId) {
-        setSelectedProjectId(projs[0].id);
-      }
+      setSelectedProjectId(current => projs.length > 0 && !current ? projs[0].id : current);
     } catch (e) {
       console.error('Failed to load projects', e);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchProjects().then(projs => {
+      if (!mounted) return;
+      setProjects(projs);
+      setSelectedProjectId(current => projs.length > 0 && !current ? projs[0].id : current);
+    }).catch(e => {
+      console.error('Failed to load projects', e);
+    });
+    pingBackend().then(info => {
+      if (mounted) setBackendInfo({ provider: info.provider, model: info.model });
+    }).catch(() => {});
+    const checkHealth = async () => {
+      try {
+        const health = await fetchHealth();
+        if (mounted) setApiHealth(health);
+      } catch {
+        if (mounted) setApiHealth(null);
+      }
+    };
+    checkHealth();
+    const interval = window.setInterval(checkHealth, 10000);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, [loadProjects]);
 
   const selectedProjectName = projects.find(p => p.id === selectedProjectId)?.name || 'Global Mode';
 
@@ -253,9 +274,17 @@ function App() {
               </button>
             </nav>
           </div>
-
           {/* Sidebar Bottom Section */}
           <div className="sidebar-bottom">
+            {/* API Health Badge */}
+            <div style={{ marginBottom: 10 }}>
+              <div className={`service-badge ${apiHealth ? 'service-online' : 'service-offline'}`}>
+                {apiHealth
+                  ? `API Online · ${apiHealth.llm_mode} · ${apiHealth.agent_count} agents`
+                  : 'API Offline · start backend'}
+              </div>
+            </div>
+
             {/* Assistant Status Widget */}
             <div className="sidebar-assistant-card">
               <div className="assistant-card-header">

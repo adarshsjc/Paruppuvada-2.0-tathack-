@@ -2,7 +2,7 @@ import json
 import re
 import sys
 from abc import ABC, abstractmethod
-from typing import Type, TypeVar
+from typing import Optional, Type, TypeVar
 from pydantic import BaseModel
 from app.config import settings
 
@@ -16,22 +16,22 @@ T = TypeVar('T', bound=BaseModel)
 
 class LLMProvider(ABC):
     @abstractmethod
-    def generate_json(self, prompt: str, schema: Type[T]) -> T:
+    def generate_json(self, prompt: str, schema: Type[T], model: Optional[str] = None) -> T:
         pass
     
     @abstractmethod
-    def generate_text(self, prompt: str) -> str:
+    def generate_text(self, prompt: str, model: Optional[str] = None) -> str:
         pass
 
 class MockLLM(LLMProvider):
     def __init__(self):
         self.call_count = 0
         
-    def generate_json(self, prompt: str, schema: Type[T]) -> T:
+    def generate_json(self, prompt: str, schema: Type[T], model: Optional[str] = None) -> T:
         self.call_count += 1
         name = schema.__name__
         if name == "Plan":
-            req_match = re.search(r"request:\s*['\"](.*?)['\"]", prompt, re.DOTALL)
+            req_match = re.search(r"request:\s*['\"](.*?)['\"]", prompt, re.DOTALL | re.IGNORECASE)
             req_text = req_match.group(1).strip() if req_match else "the submitted task"
             
             p_lower = req_text.lower()
@@ -138,12 +138,31 @@ class MockLLM(LLMProvider):
 
             return schema(approved=True, feedback="Approved. The final result satisfies the request.")
 
+        elif name == "CandidateSelection":
+            return schema(selected_agent=1, rationale="Selected the first available mock solution.")
+
         return schema()
 
-    def generate_text(self, prompt: str) -> str:
+    def generate_text(self, prompt: str, model: Optional[str] = None) -> str:
         if "Summarize" in prompt:
             res_part = prompt.split(":")[-1].strip() if ":" in prompt else prompt
             return f"[MOCK] Summary: {res_part}"
+        if "Agent role: Direct Solver" in prompt:
+            return (
+                "[MOCK] Direct Solver: simulated direct-answer candidate. "
+                "Configure an OpenRouter API key for a real model response."
+            )
+        if "Agent role: Critical Thinker" in prompt:
+            return (
+                "[MOCK] Critical Thinker: simulated independent analysis candidate, "
+                "including a check for assumptions and edge cases. Configure OpenRouter "
+                "for a real model response."
+            )
+        if "Agent role: Research Synthesizer" in prompt:
+            return (
+                "[MOCK] Research Synthesizer: simulated evidence-and-alternatives candidate. "
+                "Configure OpenRouter for a real model response."
+            )
         return f"[MOCK] Processed: {prompt}"
 
 def extract_json_text(content: str) -> str:
@@ -392,16 +411,7 @@ class OpenAILLM(LLMProvider):
         try:
             from openai import OpenAI
             self.last_model_used = None
-            # Priority 1: Gemini direct API (fastest, ~600-900ms per step)
-            if settings.gemini_api_key and settings.gemini_api_key.strip() not in ("", "PASTE_YOUR_KEY_HERE"):
-                self.client = OpenAI(
-                    api_key=settings.gemini_api_key.strip(),
-                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-                )
-                self.model = settings.gemini_model
-                self.provider_name = "gemini"
-            # Priority 2: OpenRouter free models (slower, 5-12s per step)
-            elif settings.openrouter_api_key and settings.openrouter_api_key.strip() not in ("", "PASTE_YOUR_API_KEY_HERE"):
+            if settings.openrouter_api_key and settings.openrouter_api_key.strip() not in ("", "PASTE_YOUR_API_KEY_HERE"):
                 self.client = OpenAI(
                     api_key=settings.openrouter_api_key.strip(),
                     base_url=settings.openrouter_base_url,
@@ -413,12 +423,11 @@ class OpenAILLM(LLMProvider):
                 self.model = settings.openrouter_model
                 self.provider_name = "openrouter"
             else:
-                raise ValueError("No API key configured. Set GEMINI_API_KEY or OPENROUTER_API_KEY in backend/.env")
+                raise ValueError("OPENROUTER_API_KEY is not configured or is still the placeholder.")
         except ImportError:
             raise RuntimeError("openai package is not installed.")
 
-
-    def generate_json(self, prompt: str, schema: Type[T]) -> T:
+    def generate_json(self, prompt: str, schema: Type[T], model: Optional[str] = None) -> T:
         system_prompt = (
             "You are a helpful assistant that strictly follows instructions. "
             f"You MUST return ONLY valid JSON matching this schema, with no conversational filler or markdown before or after:\n"
@@ -432,7 +441,7 @@ class OpenAILLM(LLMProvider):
                 # Attempt with response_format={"type": "json_object"} first
                 try:
                     response = self.client.chat.completions.create(
-                        model=self.model,
+                        model=model or self.model,
                         response_format={"type": "json_object"},
                         messages=[
                             {"role": "system", "content": system_prompt},
@@ -444,7 +453,7 @@ class OpenAILLM(LLMProvider):
                     # Some free models on OpenRouter do not support response_format parameter
                     if "response_format" in str(api_err).lower() or "400" in str(api_err):
                         response = self.client.chat.completions.create(
-                            model=self.model,
+                            model=model or self.model,
                             messages=[
                                 {"role": "system", "content": system_prompt},
                                 {"role": "user", "content": prompt}
@@ -467,9 +476,9 @@ class OpenAILLM(LLMProvider):
                 
         raise ValueError(f"LLM (model: {self.last_model_used}) produced invalid JSON matching schema: {last_err}")
             
-    def generate_text(self, prompt: str) -> str:
+    def generate_text(self, prompt: str, model: Optional[str] = None) -> str:
         response = self.client.chat.completions.create(
-            model=self.model,
+            model=model or self.model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1000
         )

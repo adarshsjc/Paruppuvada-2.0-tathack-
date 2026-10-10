@@ -19,6 +19,10 @@ class ReviewResult(BaseModel):
     approved: bool = Field(description="True if the result meets the original request")
     feedback: str = Field(description="Feedback for the executor if rejected, or reasoning if approved")
 
+class CandidateSelection(BaseModel):
+    selected_agent: int = Field(description="The selected agent number from the supplied candidates")
+    rationale: str = Field(description="Why this candidate best satisfies the user's request")
+
 class TaskState(BaseModel):
     task_id: str
     request: str

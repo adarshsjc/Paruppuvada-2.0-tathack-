@@ -26,10 +26,10 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openrouter_model: str = "openrouter/free"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_agent_models: str = "openrouter/free,openrouter/free,openrouter/free"
 
-    # Gemini API Integration (kept as fallback)
-    gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.8-flash"
+    web_search_enabled: bool = True
+    web_search_max_results: int = 5
 
     # --- Memory graph / execution system ---
     memory_db_path: str = "memory.db"

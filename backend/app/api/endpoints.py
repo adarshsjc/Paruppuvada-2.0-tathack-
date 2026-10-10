@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import List, Optional
-from app.agents.orchestrator import run_workflow
+from app.agents.ensemble import AGENT_COUNT, run_parallel_workflow
+from app.config import settings
 from app.memory.sqlite import get_memory_provider
 from app.memory.base import Project, MemoryItem
 
@@ -21,7 +22,6 @@ class ProjectCreate(BaseModel):
 
 @router.get("/health")
 def health_check():
-    from app.config import settings
     provider = "mock" if settings.use_mock_llm else settings.llm_provider
     model = "MockLLM"
     if not settings.use_mock_llm:
@@ -31,7 +31,21 @@ def health_check():
             model = settings.openrouter_model
         elif settings.llm_provider == "gemini":
             model = settings.gemini_model
-    return {"status": "ok", "provider": provider, "model": model}
+
+    if settings.use_mock_llm:
+        mode = "mock"
+    elif settings.openrouter_api_key and settings.openrouter_api_key != "PASTE_YOUR_API_KEY_HERE":
+        mode = "openrouter"
+    else:
+        mode = provider
+
+    return {
+        "status": "ok",
+        "provider": provider,
+        "model": model,
+        "llm_mode": mode,
+        "agent_count": AGENT_COUNT
+    }
 
 @router.post("/api/v1/projects", response_model=Project)
 def create_project(data: ProjectCreate):
@@ -66,7 +80,7 @@ def create_task(request: TaskRequest):
     if not request.description.strip():
         raise HTTPException(status_code=400, detail="Task description cannot be empty.")
     try:
-        state = run_workflow(request.description, project_id=request.project_id)
+        state = run_parallel_workflow(request.description, project_id=request.project_id)
         return TaskResponse(status=state.status, result=state.final_result or "", details=state.model_dump())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

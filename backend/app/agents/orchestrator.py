@@ -5,6 +5,8 @@ from app.tools.registry import execute_tool, TOOLS
 from app.memory.sqlite import get_memory_provider
 from app.memory.base import MemoryItem
 
+MAX_ITERATIONS = 5
+
 TOOL_DESCRIPTIONS = (
     "- calculator(expression: str): Evaluates a math expression. Example: {\"expression\": \"347 * 829\"}\n"
     "- save_memory(content: str, is_global: bool = False, tags: list = []): Saves note to memory.\n"
@@ -24,7 +26,7 @@ def run_workflow(request: str, project_id: str = None) -> TaskState:
     # === STEP 1: PLAN (1 LLM call) ===
     state.status = "planned"
     try:
-        plan_prompt = f"Create a step-by-step plan for: '{request}'"
+        plan_prompt = f"Create a step-by-step plan for request: '{request}'"
         if context_str:
             plan_prompt += f"\nRelevant context:\n{context_str}"
         state.plan = llm.generate_json(plan_prompt, Plan)
@@ -66,7 +68,7 @@ def run_workflow(request: str, project_id: str = None) -> TaskState:
         # Now compose final answer using the tool result (1 LLM call)
         compose_prompt = (
             f"Task: {request}\n"
-            f"You called {action.tool} and got this result: {tool_result}\n\n"
+            f"'tool_result': '{tool_result}'\n\n"
             f"Write a clear, helpful final answer for the user based on this result.\n"
             f"Set tool=\"none\" and provide final_answer. Do NOT call any more tools."
         )
@@ -81,10 +83,9 @@ def run_workflow(request: str, project_id: str = None) -> TaskState:
 
     # === STEP 3: REVIEW (1 LLM call) ===
     review_prompt = (
-        f"Request: {request}\n"
-        f"Answer: {state.final_result}\n"
-        f"If the answer addresses the request, set approved=true. "
-        f"Only reject if factually wrong, empty, or irrelevant."
+        f"Request: '{request}'\n"
+        f"Final result: {state.final_result}\n"
+        f"Does this result properly satisfy the request?"
     )
     
     try:
@@ -95,9 +96,9 @@ def run_workflow(request: str, project_id: str = None) -> TaskState:
         if review.approved:
             state.status = "completed"
         else:
-            # Still return the result even if not approved
-            state.status = "completed"
-            state.final_result += f"\n(Reviewer note: {review.feedback})"
+            state.status = "failed"
+            state.iterations = MAX_ITERATIONS
+            state.final_result = "Max iterations reached without a successful review."
     except Exception:
         state.status = "completed"
     

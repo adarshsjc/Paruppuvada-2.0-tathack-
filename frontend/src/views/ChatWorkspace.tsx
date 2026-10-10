@@ -131,6 +131,15 @@ export default function ChatWorkspace({
   };
 
   const latestState = selectedTraceState || messages.filter(m => m.state).pop()?.state;
+  const agentCandidates = latestState?.execution_steps.flatMap(step =>
+    Array.isArray(step.parallel_agents) ? step.parallel_agents : []
+  ) ?? [];
+  const webResults = latestState?.execution_steps.flatMap(step =>
+    Array.isArray(step.web_research) ? step.web_research : []
+  ) ?? [];
+  const webSearchErrors = latestState?.execution_steps
+    .map(step => step.web_search_error)
+    .filter((message): message is string => typeof message === 'string') ?? [];
 
   return (
     <div className="open-chat-layout">
@@ -465,6 +474,55 @@ export default function ChatWorkspace({
                   ))}
                 </div>
               )}
+
+              {/* Parallel Agent Solutions if present */}
+              {agentCandidates.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Parallel Agent Solutions ({agentCandidates.length})
+                  </h3>
+                  {agentCandidates.map((candidate, idx) => (
+                    <div key={idx} className="trace-step-card" style={{ borderLeft: `4px solid ${candidate.selected ? '#10b981' : '#6366f1'}` }}>
+                      <div className="trace-card-top">
+                        <span className="step-agent-badge" style={{ backgroundColor: candidate.selected ? '#ecfdf5' : '#eef2ff', color: candidate.selected ? '#047857' : '#4338ca' }}>
+                          Agent {candidate.agent} · {candidate.role || 'Solution Agent'}
+                        </span>
+                        {candidate.selected && <span className="nav-pill-badge pill-emerald-cat">Selected</span>}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748b', marginBottom: 6 }}>Model: {candidate.model}</div>
+                      <div style={{ fontSize: '12px', whiteSpace: 'pre-wrap', color: '#1e293b' }}>
+                        {candidate.solution || `Agent failed: ${candidate.error}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Web Research Sources if present */}
+              {webResults.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Web Research Sources ({webResults.length})
+                  </h3>
+                  {webResults.map((result, idx) => (
+                    <div key={idx} className="trace-step-card" style={{ borderLeft: '4px solid #06b6d4' }}>
+                      <a href={result.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600, fontSize: '13px', color: '#0284c7', textDecoration: 'none' }}>
+                        {result.title} ↗
+                      </a>
+                      {result.snippet && (
+                        <div style={{ fontSize: '12px', color: '#475569', marginTop: 4 }}>
+                          {result.snippet}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {webSearchErrors.map((message, idx) => (
+                <div key={idx} className="trace-step-card" style={{ borderLeft: '4px solid #f59e0b', color: '#b45309', fontSize: '12px' }}>
+                  {message}
+                </div>
+              ))}
 
               {/* Reviewer Final Verification */}
               {latestState.review && (

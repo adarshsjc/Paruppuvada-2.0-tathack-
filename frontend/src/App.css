@@ -63,6 +63,23 @@
   gap: 6px;
 }
 
+.service-badge {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.service-online {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
 .brand-name {
   font-size: 1.05rem;
   font-weight: 700;

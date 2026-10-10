@@ -5,13 +5,13 @@
 ## 1. Project Overview
 This project is an **Autonomous AI Agent & Project Management Platform** known as **Open Chat** (modeled after the **Stratify** design system). Built for a hackathon and production-ready iteration, it provides an end-to-end multi-agent system executing complex goals with persistent memory, isolated project contexts, tool sandboxing, reviewer verification loops, and a cyber-deck mission control interface.
 
-Currently, it plans, executes, and reviews tasks through an autonomous ReAct-style state machine, while storing contextual embeddings and notes in a local SQLite database.
+Currently, it plans, executes, and reviews tasks through an autonomous ReAct-style state machine and parallel solution agent ensemble, while storing contextual embeddings, nodes, and notes in a local SQLite database and graph memory store.
 
 ## 2. Technologies Used
 - **Backend:** Python (3.11+), FastAPI, Uvicorn, Pydantic v2, Pytest, standard `sqlite3` library.
 - **LLM Integration:** Local Ollama inference (`qwen2.5:3b`), OpenRouter Free Models Router, Google Gemini API, and a built-in zero-cost `MockLLM` mode.
 - **Frontend:** React 19, TypeScript, Vite, Vanilla CSS Design System, `3d-force-graph` for 3D Memory Rendering, `lucide-react` for icons.
-- **Orchestration & Tooling:** Custom multi-agent state machine (Planner ➔ Executor ➔ Reviewer ➔ Memory Summarizer), restricted Python tool sandbox (safe math calculator, SQLite memory tools), Server-Sent Events (SSE) for realtime graph streaming.
+- **Orchestration & Tooling:** Custom multi-agent state machine (Planner ➔ Executor ➔ Reviewer ➔ Memory Summarizer) plus parallel ensemble agents with judge selection, restricted Python tool sandbox (safe math calculator, SQLite memory tools, web search), Server-Sent Events (SSE) for realtime graph streaming.
 
 ## 3. Architecture & Decisions Made
 - **Monorepo Structure:** The codebase is split strictly into `backend/` and `frontend/` to keep concerns decoupled.
@@ -21,17 +21,18 @@ Currently, it plans, executes, and reviews tasks through an autonomous ReAct-sty
   2. **Executor:** Uses ReAct-style loops (up to a 5-iteration limit) to pick tools (e.g., `calculator`, `save_memory`).
   3. **Reviewer:** Validates the Executor's final answer against the original request.
   4. **Memory Persistence:** Auto-summarizes execution traces back to project or global memory.
+- **Parallel Solutions Ensemble:** Tasks can also be solved by concurrent solution agents with judge selection, recording individual failures without discarding successful candidates.
 - **Strict JSON Outputs:** Agents are forced to output structured data matching Pydantic schemas using `response_format={"type": "json_object"}` and resilient markdown fence parsing.
 - **Mock LLM Mode:** Configured via `.env` (`USE_MOCK_LLM=True`). This allows offline UI/UX development and fast test execution without spending real API credits.
 - **Tool Sandbox:** Tools are explicitly defined Python functions. We purposefully avoid unrestricted Python `exec()` or Shell execution for security. For example, the `calculator` tool uses a strict whitelist of math characters.
 - **Stratify Design Aesthetics:** Light canvas (`#f4f6fa`), clean white card surfaces (`#ffffff`), soft floating shadows, rounded-3xl / 24px cards, vibrant blue/indigo gradients (`#2563eb`), micro-animations (soundwaves, active glow pulses), and modern typography.
 
-## 4. What Has Been Implemented (Phases 1-6)
+## 4. What Has Been Implemented (Phases 1-8)
 1. **Phase 1 (Foundation):** FastAPI backend, modular folder structure (`api/`, `agents/`, `tools/`), MockLLM, and basic pytest suite.
 2. **Phase 2 (Orchestration):** The Planner -> Executor -> Reviewer loop, tool registry, and CLI tracing.
 3. **Phase 3 (Memory & Isolation):** SQLite database creation. Memories are tagged as `global`, `project`, or `session`. Tasks can be submitted with a `project_id`. The Orchestrator automatically searches memory for context before planning and auto-summarizes the result back to memory upon completion.
 4. **Phase 4 (Frontend UI Foundation):** React/Vite dashboard featuring Chat Workspace, Execution Trace, Project Selector, and Memory Explorer.
-5. **Phase 5 (OpenRouter Free Models Integration & One-Click Launch):** 
+5. **Phase 5 (OpenRouter Free Models Integration & One-Click Launch):**
    - Integrated OpenRouter's Free Models Router (`openrouter/free`) via `https://openrouter.ai/api/v1` using OpenAI SDK.
    - Dynamic model ID detection (`response.model`) capturing the exact underlying model selected per request.
    - Resilient JSON schema extraction with retry protection against non-instruct or moderation models.
@@ -45,13 +46,14 @@ Currently, it plans, executes, and reviews tasks through an autonomous ReAct-sty
    - **Smart Splitting:** Built `split_project.py` and `zip_extra.py` to divide the main monorepo into 6 balanced `.zip` packages (under 10MB each) located inside the `parts/` folder. 
    - **External Modules:** Additionally compressed independent submodules (`MiroFish` and `graphify`) into their own isolated `.zip` files within `parts/`. 
    - **AI Context Injection:** Embedded global context files (`README.md`, `project.md`, `design.md`) and a `PROJECT_STRUCTURE.txt` manifest into every single zip file so that any AI reading a single part automatically understands the global project architecture.
-8. **Phase 8 (Memory Graph Integration & Local Inference):**
-   - **Local AI Engine:** Migrated the backend inference engine from OpenRouter to local **Ollama** running `qwen2.5:3b`. This vastly improves reliability and deterministic reasoning for complex tasks while keeping data private.
+8. **Phase 8 (Memory Graph Integration, Local Inference & Windows Launcher):**
+   - **Local AI Engine:** Integrated backend inference with local **Ollama** running `qwen2.5:3b`.
    - **Memory Workspace UI:** Implemented a new "Memory Management" workspace containing a real-time **3D Force Graph** representation of all memory nodes, skills, tasks, and dependencies.
    - **RAG & Provenance:** Built a memory RAG pipeline that pulls EXPLICIT, EXTRACTED, and INFERRED nodes into the execution context.
    - **Failure Learning:** Implemented logic where failed executions trigger an extraction loop to document the failure as a memory node, which the Planner reviews to avoid repeating mistakes.
    - **Skill Selection Modal:** Wired a dynamic frontend modal in the Open Chat workspace, allowing users to selectively browse and inject required dependencies and tools into the initial context.
-   - **Realtime SSE:** Connected the backend DAG execution engine to the frontend Memory Workspace via Server-Sent Events (SSE), dynamically illuminating graph nodes as the LLM touches them in real-time.
+   - **Realtime SSE:** Connected the backend DAG execution engine to the frontend Memory Workspace via Server-Sent Events (SSE).
+   - **Windows Executable Launcher:** Created `OpenChat.exe` for seamless double-click launching on Windows.
 
 ## 5. What Went Wrong During Implementation (Gotchas & Fixes)
 When an AI works on this project in the future, watch out for these known issues that we already solved:
@@ -106,7 +108,7 @@ Because the platform's reasoning engine runs entirely offline on your machine, y
 ### Step 2: Launch Platform
 - **Option A (One-Click Windows EXE - Recommended):** Double-click `OpenChat.exe` in the root folder. This automatically starts the backend API, serves the production frontend, checks Ollama, and opens your browser without any terminal windows!
 - **Option B (One-Click Batch Script):** Double-click or run `start_app.bat`. This automatically starts the backend API, the React Vite server, and opens your browser in terminal windows.
-- **Option B (PowerShell Commands):**
+- **Option C (Terminal Commands):**
   1. Backend:
      ```powershell
      cd backend
@@ -121,7 +123,9 @@ Because the platform's reasoning engine runs entirely offline on your machine, y
   3. Open `http://localhost:5173` in your browser.
 
 ## 7. UI/UX & Frontend Design System
-The design specification and UX blueprint are documented in [design.md](file:///d:/project/Thtava%20final/design.md), and the visual design reference template is located in [stitch_stratify_ai_dashboard_ui/code.html](file:///d:/project/Thtava%20final/stitch_stratify_ai_dashboard_ui/code.html).
+The design specification and UX blueprint are documented in [design.md](./design.md), and the visual design reference template is located in `stitch_stratify_ai_dashboard_ui/code.html`.
+
+For live free-model answers, set `USE_MOCK_LLM=False` and `OPENROUTER_API_KEY` in `backend/.env`. Without that configuration, the app starts in mock mode so the site remains available offline.
 
 ## 8. Future Roadmap (Not Yet Implemented)
 - **Vector RAG:** Swapping/extending SQLite with Chroma/Qdrant for semantic search over ingested documents.
