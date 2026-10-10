@@ -34,8 +34,12 @@ def health_check():
 
     if settings.use_mock_llm:
         mode = "mock"
-    elif settings.openrouter_api_key and settings.openrouter_api_key != "PASTE_YOUR_API_KEY_HERE":
-        mode = "openrouter"
+    elif settings.llm_provider == "ollama":
+        mode = f"ollama ({settings.ollama_model})"
+    elif settings.llm_provider == "openrouter":
+        mode = f"openrouter ({settings.openrouter_model})"
+    elif settings.llm_provider == "gemini":
+        mode = f"gemini ({settings.gemini_model})"
     else:
         mode = provider
 

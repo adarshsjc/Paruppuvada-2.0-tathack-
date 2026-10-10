@@ -230,6 +230,13 @@ class OllamaLLM(LLMProvider):
             '{"csv_path": "sales.csv", "group_by": "product", "sum_column": "revenue", '
             '"report_json_path": "report.json", "report_md_path": "report.md"}'
         ),
+        "CandidateSelection": (
+            'You must output a JSON object with these exact fields:\n'
+            '- "selected_agent": integer (e.g. 1, 2, or 3)\n'
+            '- "rationale": string (reason for choosing this agent)\n\n'
+            'Example:\n'
+            '{"selected_agent": 1, "rationale": "Direct, accurate, and completely answers the prompt."}'
+        ),
     }
 
     def __init__(self):
@@ -246,9 +253,14 @@ class OllamaLLM(LLMProvider):
         self.provider_name = "ollama"
         self.last_model_used = self.model
 
-    def _build_system_prompt(self, schema_name: str) -> str:
+    def _build_system_prompt(self, schema_name: str, schema: Optional[Type[T]] = None) -> str:
         """Build a system prompt using concrete examples instead of raw JSON Schema."""
         example = self.SCHEMA_EXAMPLES.get(schema_name, "")
+        if not example and schema is not None:
+            try:
+                example = json.dumps(schema.model_json_schema())
+            except Exception:
+                example = ""
         return (
             "You are a JSON-only assistant. Respond with ONLY a single JSON object.\n"
             "CRITICAL RULES:\n"
@@ -261,34 +273,26 @@ class OllamaLLM(LLMProvider):
     @staticmethod
     def _unwrap_properties(data: dict) -> dict:
         """If the model echoed the schema structure with a 'properties' wrapper,
-        unwrap it to extract the actual values.
-        
-        Common failure mode: model returns {"properties": {"thought": {...}, ...}}
-        instead of {"thought": "actual value", ...}
-        """
+        unwrap it to extract the actual values."""
         if "properties" in data and isinstance(data["properties"], dict):
             inner = data["properties"]
-            # Check if the inner values look like schema definitions (have 'type'/'description')
-            # or actual data values
             sample_val = next(iter(inner.values()), None)
             if isinstance(sample_val, dict) and ("type" in sample_val or "description" in sample_val):
-                # Model echoed the schema — try to extract default/example values
-                # This is unrecoverable, but we can signal it clearly
-                return data  # let it fail at validation with a clear error
+                return data
             else:
-                # Model wrapped actual values in 'properties' — unwrap
                 return inner
         return data
 
-    def generate_json(self, prompt: str, schema: Type[T]) -> T:
+    def generate_json(self, prompt: str, schema: Type[T], model: Optional[str] = None) -> T:
         schema_name = schema.__name__
-        system_prompt = self._build_system_prompt(schema_name)
+        system_prompt = self._build_system_prompt(schema_name, schema)
+        target_model = model or self.model
 
         last_err = None
         for attempt in range(3):
             try:
                 response = self.client.chat.completions.create(
-                    model=self.model,
+                    model=target_model,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt}
@@ -296,7 +300,7 @@ class OllamaLLM(LLMProvider):
                     temperature=0.1,  # low temperature for structured output
                     max_tokens=800,
                 )
-                self.last_model_used = getattr(response, 'model', self.model)
+                self.last_model_used = getattr(response, 'model', target_model)
                 raw_content = response.choices[0].message.content or ""
                 print(f"  [Ollama] attempt={attempt+1} model={self.last_model_used} raw_len={len(raw_content)}")
 
@@ -313,6 +317,8 @@ class OllamaLLM(LLMProvider):
                     parsed = self._normalize_executor_action(parsed)
                 elif schema_name == "ReviewResult":
                     parsed = self._normalize_review_result(parsed)
+                elif schema_name == "CandidateSelection":
+                    parsed = self._normalize_candidate_selection(parsed)
 
                 return schema.model_validate(parsed)
             except Exception as e:
@@ -327,7 +333,6 @@ class OllamaLLM(LLMProvider):
     @staticmethod
     def _normalize_executor_action(data: dict) -> dict:
         """Normalize field names that small models commonly get wrong."""
-        # Map alternative key names to the canonical ones
         if "thought" not in data:
             for alt in ["thinking", "reasoning", "reason", "thoughts", "rationale"]:
                 if alt in data:
@@ -358,7 +363,6 @@ class OllamaLLM(LLMProvider):
                     data["final_answer"] = data.pop(alt)
                     break
 
-        # Ensure tool_input is a dict
         if not isinstance(data.get("tool_input"), dict):
             ti = data.get("tool_input")
             if isinstance(ti, str):
@@ -387,20 +391,44 @@ class OllamaLLM(LLMProvider):
             else:
                 data["feedback"] = "No feedback provided."
 
-        # Coerce approved to bool
         if isinstance(data["approved"], str):
             data["approved"] = data["approved"].lower() in ("true", "yes", "1", "approved", "pass")
 
         return data
 
-    def generate_text(self, prompt: str) -> str:
+    @staticmethod
+    def _normalize_candidate_selection(data: dict) -> dict:
+        """Normalize CandidateSelection fields from small model output."""
+        if "selected_agent" not in data:
+            for alt in ["agent", "selected", "candidate", "winner", "id", "choice"]:
+                if alt in data:
+                    data["selected_agent"] = data.pop(alt)
+                    break
+            else:
+                data["selected_agent"] = 1
+        try:
+            data["selected_agent"] = int(data["selected_agent"])
+        except Exception:
+            data["selected_agent"] = 1
+
+        if "rationale" not in data:
+            for alt in ["reason", "explanation", "comment", "thought"]:
+                if alt in data:
+                    data["rationale"] = data.pop(alt)
+                    break
+            else:
+                data["rationale"] = "Optimal solution selected."
+        return data
+
+    def generate_text(self, prompt: str, model: Optional[str] = None) -> str:
+        target_model = model or self.model
         response = self.client.chat.completions.create(
-            model=self.model,
+            model=target_model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=300,
+            max_tokens=400,
         )
-        self.last_model_used = getattr(response, 'model', self.model)
+        self.last_model_used = getattr(response, 'model', target_model)
         return response.choices[0].message.content or ""
 
 
@@ -488,25 +516,15 @@ class OpenAILLM(LLMProvider):
 
 def get_llm() -> LLMProvider:
     """Factory: returns the configured LLM provider instance.
-    
-    Priority:
-      1. USE_MOCK_LLM=True  -> MockLLM (offline, no API)
-      2. LLM_PROVIDER=ollama -> OllamaLLM (local Ollama)
-      3. LLM_PROVIDER=openrouter -> OpenAILLM (cloud, OpenRouter)
-      4. LLM_PROVIDER=gemini -> OpenAILLM (cloud, Gemini)
+    Defaults to local Ollama (qwen2.5:3b).
     """
     if settings.use_mock_llm:
         return MockLLM()
 
-    provider = settings.llm_provider.lower().strip()
-
-    if provider == "ollama":
-        return OllamaLLM()
-    elif provider in ("openrouter", "gemini"):
+    provider = (settings.llm_provider or "ollama").lower().strip()
+    if provider in ("openrouter", "gemini"):
         return OpenAILLM()
-    else:
-        raise ValueError(
-            f"Unknown LLM_PROVIDER='{provider}'. "
-            f"Valid values: 'ollama', 'openrouter', 'gemini'. "
-            f"Or set USE_MOCK_LLM=True for offline mode."
-        )
+    
+    # Default: Ollama local instance
+    return OllamaLLM()
+

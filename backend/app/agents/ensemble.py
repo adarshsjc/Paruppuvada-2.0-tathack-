@@ -44,7 +44,7 @@ def _agent_models(llm) -> List[str]:
         models = [model.strip() for model in settings.openrouter_agent_models.split(",") if model.strip()]
         models = models or [settings.openrouter_model]
         return (models * AGENT_COUNT)[:AGENT_COUNT]
-    return [getattr(llm, "model", "mock")] * AGENT_COUNT
+    return [settings.ollama_model] * AGENT_COUNT
 
 
 def run_parallel_workflow(request: str, project_id: str = None) -> TaskState:

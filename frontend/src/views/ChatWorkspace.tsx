@@ -152,7 +152,13 @@ export default function ChatWorkspace({
               <Bot size={16} />
             </div>
             <div>
-              <h2 className="chat-header-title">Open Chat Workspace</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h2 className="chat-header-title">Open Chat Workspace</h2>
+                <span className="service-badge service-online" style={{ fontSize: '10px', padding: '2px 8px' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+                  Qwen2.5:3B (Ollama Local)
+                </span>
+              </div>
               <span style={{ fontSize: '11px', color: '#64748b' }}>
                 Context: {projectId ? `Project ${projectId.slice(0, 8)}...` : 'Global Mode'}
               </span>
