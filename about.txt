@@ -1,0 +1,126 @@
+PROJECT TITLE
+Autonomous AI Agent Platform with Graph-Based Memory, Reusable Skills, and Built-In Security
+
+PROJECT CATEGORY
+Track 1 — Autonomous AI Agents
+
+PROJECT OVERVIEW
+This project explores an AI workspace that can do more than generate a one-time answer. It is designed to coordinate multi-step tasks, use relevant context, execute permitted tools, review outputs, and preserve useful information for future work. The goal is to make AI workflows more contextual, inspectable, and reusable.
+
+CORE IDEA
+An AI agent should not merely answer a question. It should execute a task, use relevant context, verify its result, preserve useful knowledge, and make its actions inspectable.
+
+THE PROBLEM
+Many AI workflows face several practical limitations:
+- Useful context may be lost between separate tasks or projects.
+- Multi-step work requires coordination between planning, execution, and review.
+- Procedures and lessons learned are not always easy to reuse in later projects.
+- A confident answer is not necessarily a verified answer.
+- Tool calls and agent decisions can be difficult to inspect when only the final response is shown.
+- External documents and web content can contain prompt-injection attempts that need to be treated as untrusted input.
+
+OUR APPROACH
+The platform combines an agent orchestration backend, a web-based workspace, persistent memory, restricted tool execution, and execution traces. Depending on the configured workflow, the system can use a parallel group of solution agents and a judge model to select an answer, or a separate Planner–Executor–Reviewer workflow for state-based task execution. These are related but distinct workflows and should not be described as one mandatory sequence.
+
+PARALLEL SOLUTION-AGENT WORKFLOW
+1. Receive a user task.
+2. Generate candidate solutions concurrently through three roles:
+   - Direct Solver
+   - Critical Thinker
+   - Research Synthesizer
+3. Collect the candidate outputs.
+4. Use a judge model to select or synthesize a response.
+5. Persist relevant task information and execution details in SQLite where appropriate.
+
+PLANNER–EXECUTOR–REVIEWER WORKFLOW
+1. The Planner converts the user request into a structured goal or plan.
+2. The Executor carries out permitted actions and may call a restricted tool, such as a calculator.
+3. The Reviewer examines the outcome and determines whether it satisfies the task.
+4. The system returns the result and records relevant execution information.
+
+The platform does not necessarily run both workflows for every request. The actual path depends on the selected task/API workflow and configuration.
+
+PERSISTENT MEMORY
+The current baseline uses SQLite-backed persistent memory with three scopes:
+- Session Memory: information relevant to a particular session.
+- Project Memory: context associated with a specific project.
+- Global Memory: information that may be useful across projects.
+
+The implemented memory flow supports contextual memory injection and summary write-back. After a task, a concise summary can be saved so relevant context may be retrieved for a later task. Project-scoped information should remain associated with its intended project.
+
+ADVANCED GRAPH MEMORY AND REUSABLE SKILLS
+A longer-term direction is to represent project knowledge as connected entities and relationships. Examples include projects, requirements, tools, decisions, failures, recoveries, documents, workflows, experiences, and skills. Such a graph could help later tasks discover relevant procedures and lessons.
+
+Advanced graph-memory integration, a shared skill library, automatic knowledge extraction from supported links, and advanced cross-project skill composition are planned capabilities unless separately demonstrated as implemented. A graph visualization alone is not proof that a production graph-memory backend is operational.
+
+SECURITY APPROACH
+The current baseline is designed with several security-conscious controls:
+- An explicit tool registry limits which tools are available to the agent.
+- The intended tool pathway uses restricted operations, such as a calculator, instead of unrestricted Python exec() or arbitrary shell execution.
+- Structured outputs are validated before they are used by later steps.
+- Agent instructions include prompt-injection defenses.
+- Environment files can be excluded from version control through .gitignore.
+- Execution traces help users inspect relevant tool activity and workflow outcomes.
+
+These controls reduce risk but do not make the platform immune to prompt injection or other attacks. Stronger runtime policy enforcement, human approval for sensitive actions, expanded data-loss prevention, and broader security evaluation remain planned enhancements.
+
+OBSERVABILITY AND EXECUTION INSPECTION
+The workspace is intended to help users inspect more than a final answer. Depending on the workflow, the interface can expose agent activity, candidate outputs, tool invocations, selected responses, reviewer decisions, workflow state, relevant errors, and task history. This makes the system easier to understand and debug, but an execution trace by itself does not prove that every conclusion is correct.
+
+TECHNOLOGY STACK
+Frontend:
+- React
+- TypeScript
+- Vite
+- Vanilla CSS
+- Lucide icons
+
+Backend:
+- Python
+- FastAPI
+- Uvicorn
+- Pydantic v2
+- Pytest
+
+AI and orchestration:
+- Ollama support for configured local model inference, including Qwen 2.5 model support
+- OpenRouter integration as an alternative provider configuration
+- Parallel solution agents and judge-based selection
+- Planner–Executor–Reviewer workflow
+
+Storage and tools:
+- SQLite persistent storage
+- Explicit tool registry
+- Restricted calculator tool
+- Memory search and summary write-back
+- Basic memory-gated public web search fallback when configured
+
+Mock mode may simulate execution for offline development. Simulated output should not be presented as evidence of live model reasoning.
+
+CURRENT IMPLEMENTED BASELINE
+The current project baseline includes the modular FastAPI backend, agent workflow paths, structured output validation, SQLite-backed Session/Project/Global memory, contextual memory injection, summary write-back, React dashboard and execution-inspection surfaces, OpenRouter integration, an option to use local Ollama inference, restricted tool execution, mock mode, basic memory-gated search, automated tests, and a Windows launcher.
+
+PLANNED OR INCOMPLETE WORK
+- Full vector-based retrieval-augmented generation (RAG)
+- Production-grade graph-memory integration
+- Advanced reusable skills and cross-project skill composition
+- Knowledge extraction from supported public links
+- Stronger source-aware hallucination checks
+- Runtime policy enforcement and human approval for sensitive or irreversible actions
+- Expanded data-loss prevention, security testing, and deployment documentation
+
+The project is a working baseline under active development; it should not be described as production-ready.
+
+DEMO SCENARIO
+Example task: “Calculate 347 × 829, explain the result briefly, and save a concise project note about the calculation workflow.”
+
+The expected arithmetic result is 287,663. During a live demo, show the task submission, inspect the actual execution trace and tool activity, then open the memory interface to demonstrate a saved note. If persistence across tasks is part of the demonstration, submit a second task that asks the system to retrieve the saved note. Only claim that each step works if it can be demonstrated in the running application.
+
+PROJECT VALUE
+The platform brings task execution, contextual memory, review, restricted tools, and workflow inspection into one workspace. Its central value is not that it guarantees perfect answers, but that it aims to make AI-assisted work easier to contextualize, inspect, and improve over time.
+
+PROJECT REPOSITORY
+https://github.com/adarshsjc/Paruppuvada-2.0-tathack-
+
+CLOSING STATEMENT
+The future of AI is not just answering. It is executing, remembering, and improving responsibly.

@@ -12,8 +12,7 @@ The platform provides a **Dual Chat Architecture**:
 ---
 
 ## 2. Technologies Used
-- **Backend:** Python (3.11+), FastAPI, Uvicorn, Pydantic v2, Pytest, standard `sqlite3` library.
-- **LLM Integration:** Local Ollama inference (`qwen2.5:3b` at `http://127.0.0.1:11434`), OpenRouter Free Models Router, Google Gemini API, and built-in zero-cost `MockLLM` mode.
+- **LLM Integration:** Local Ollama inference (`qwen2.5:7b` / `qwen2.5:3b` at `http://127.0.0.1:11434`), OpenRouter Free Models Router, Google Gemini API, and built-in zero-cost `MockLLM` mode.
 - **Frontend:** React 19, TypeScript, Vite, Vanilla CSS Design System (Stratify tokens), `3d-force-graph` for 3D Memory Rendering, `lucide-react` for icons.
 - **Orchestration & Tooling:** 
   - Dual-mode chat execution (Instant Direct vs Multi-Agent Ensemble).
@@ -84,9 +83,9 @@ The repository is split strictly into `backend/` and `frontend/` to keep concern
 6. **Phase 6 (Stratify UI Redesign):** Complete brand and UI overhaul adhering to Stratify clean card aesthetics, bento dashboards, and micro-animations.
 7. **Phase 7 (AI Context Splitting):** Monorepo chunking via `split_project.py` and `zip_extra.py` into 6 balanced `.zip` packages under 10MB in `parts/`.
 8. **Phase 8 (Memory Graph Integration, Local Inference & Windows Launcher):**
-   - Connected backend to local Ollama running `qwen2.5:3b`.
+   - Connected backend to local Ollama running `qwen2.5:7b` / `qwen2.5:3b`.
    - 3D Force-Directed Memory Graph workspace (`3d-force-graph`).
-   - RAG memory injection and failure learning extraction.
+   - RAG memory injection, provenance tracking, and failure learning extraction.
    - Built standalone Windows executable launcher `OpenChat.exe`.
 9. **Phase 9 (Dual Chat Modes - Simple vs Complex):**
    - Implemented Simple Mode (`POST /api/v1/chat/simple`) for sub-2-second direct terminal-style Ollama chat responses.
@@ -138,12 +137,12 @@ The repository is split strictly into `backend/` and `frontend/` to keep concern
 
 ## 6. How to Run the Platform
 
-### Step 1: Start Local Ollama AI Engine
-Ensure Ollama is installed and running with `qwen2.5:3b`:
+### Step 1: Start Local AI Engine
+Because the platform's reasoning engine runs entirely offline on your machine, ensure [Ollama](https://ollama.com/) is running with `qwen2.5:7b`:
 ```powershell
-ollama run qwen2.5:3b
+ollama run qwen2.5:7b
 ```
-The backend automatically connects to Ollama at `http://127.0.0.1:11434`.
+Once running, the backend automatically connects to Ollama at `http://localhost:11434` (or `http://127.0.0.1:11434`).
 
 ### Step 2: Launch Platform
 - **Option A (One-Click Windows EXE - Recommended):** Double-click `OpenChat.exe` in the root folder. It starts the backend API, frontend server, checks Ollama, and opens your browser.

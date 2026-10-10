@@ -5,7 +5,7 @@
    ("keyword" unless embeddings are configured).
    ========================================================================= */
 import { useEffect, useState } from 'react';
-import { FileText, Search, Upload } from 'lucide-react';
+import { FileText, RefreshCw, Search, Upload } from 'lucide-react';
 import * as api from '../../memory/api';
 import type { RagDocument, RagResult } from '../../memory/types';
 
@@ -41,6 +41,17 @@ export default function RagTab({ projectId }: Props) {
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
 
+  // Memory management is driven by the project's CSV files: re-scan the
+  // backend workspace (backend/workspace/*.csv) and mirror them into memory.
+  const syncWorkspaceCsvs = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await api.ingestWorkspaceCsvs();
+      load(); // refreshed document list below shows the mirrored CSV docs
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+
   const runQuery = async () => {
     if (!query.trim()) return;
     setBusy(true);
@@ -70,6 +81,14 @@ export default function RagTab({ projectId }: Props) {
           <button className="mem-btn mem-btn-primary" disabled={busy} onClick={ingest}>
             Ingest into memory
           </button>
+          <div className="mem-tab-toolbar" style={{ marginTop: 8 }}>
+            <button className="mem-btn" disabled={busy} onClick={syncWorkspaceCsvs}>
+              <RefreshCw size={12} /> Sync project CSV files
+            </button>
+            <span className="mem-muted" style={{ fontSize: '11px' }}>
+              Mirrors backend/workspace/*.csv into memory (idempotent)
+            </span>
+          </div>
           <div className="mem-section" style={{ marginTop: 14 }}>
             <div className="mem-section-title">Stored documents ({docs.length})</div>
             <ul className="mem-mini-list">

@@ -227,3 +227,41 @@ def list_documents(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
         ]
     finally:
         conn.close()
+
+
+def ingest_workspace_csvs(store: GraphStore, project_id: Optional[str] = None,
+                          db_path: Optional[str] = None) -> Dict[str, Any]:
+    """Mirror every CSV file in the configured project workspace into memory.
+
+    This is the project-driven alternative to an LLM/codebase-mapper (such as
+    Graphify) building the graph: memory nodes/edges are created from the actual
+    data files the user placed in the workspace, so the memory mapping exactly
+    matches the CSV content on disk. Idempotent: a CSV already ingested under
+    the same name + project scope is skipped (its content is not re-written).
+    """
+    from app.config import settings
+
+    root = os.path.abspath(settings.workspace_dir)
+    os.makedirs(root, exist_ok=True)
+    csv_paths = sorted(
+        os.path.join(dirpath, fname)
+        for dirpath, _dirs, fnames in os.walk(root)
+        for fname in fnames
+        if fname.lower().endswith(".csv")
+    )
+    existing = {
+        d["name"]
+        for d in list_documents(db_path)
+        if d.get("project_id") == project_id and d.get("mime") == "text/csv"
+    }
+    ingested, skipped = [], []
+    for path in csv_paths:
+        name = os.path.basename(path)
+        if name in existing:
+            skipped.append({"file": name, "reason": "already_ingested"})
+            continue
+        try:
+            ingested.append(ingest_file(path, project_id, store, db_path=db_path))
+        except Exception as e:  # one bad file must not block the rest
+            skipped.append({"file": name, "reason": f"error: {e}"})
+    return {"scanned": len(csv_paths), "ingested": ingested, "skipped": skipped}

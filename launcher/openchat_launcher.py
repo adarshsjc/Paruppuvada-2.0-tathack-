@@ -90,8 +90,8 @@ def main():
         except FileNotFoundError:
             show_error("Ollama Missing", "Ollama does not appear to be installed on your PATH.\nPlease install Ollama from https://ollama.com/")
             
-    # 4. Check Qwen2.5:3B model
-    target_model = "qwen2.5:3b"
+    # 4. Check Qwen2.5:7B model
+    target_model = "qwen2.5:7b"
     if target_model not in models:
         if not any(m.startswith(target_model) for m in models):
             show_error("Model Missing", f"The required model '{target_model}' is not installed in Ollama.\nPlease open a terminal and run:\nollama pull {target_model}")

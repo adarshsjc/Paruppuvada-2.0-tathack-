@@ -1,11 +1,11 @@
 """
 Ollama Integration Tests for Open Chat
 =======================================
-Tests the full agent workflow using the local Qwen2.5:3b-instruct model via Ollama.
+Tests the full agent workflow using the local Qwen2.5:7b-instruct model via Ollama.
 
 Prerequisites:
   - Ollama running locally on port 11434
-  - qwen2.5:3b-instruct model pulled
+  - qwen2.5:7b-instruct model pulled
   - backend/.env: USE_MOCK_LLM=False, LLM_PROVIDER=ollama
 
 Run:
@@ -285,7 +285,7 @@ def test_full_workflow():
 if __name__ == "__main__":
     print("╔══════════════════════════════════════════════════════════════════════╗")
     print("║   Open Chat - Ollama Integration Test Suite                        ║")
-    print("║   Model: qwen2.5:3b-instruct | Provider: Ollama (local)           ║")
+    print("║   Model: qwen2.5:7b-instruct | Provider: Ollama (local)           ║")
     print("╚══════════════════════════════════════════════════════════════════════╝")
     print()
     print(f"Config: USE_MOCK_LLM={settings.use_mock_llm}, LLM_PROVIDER={settings.llm_provider}")

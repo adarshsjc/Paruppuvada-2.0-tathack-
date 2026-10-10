@@ -138,7 +138,7 @@ def create_task(request: TaskRequest):
             )
             return TaskResponse(status=state.status, result=state.final_result or "", details=state.model_dump())
 
-        # Simple mode: fast terminal-style direct response from local Qwen 2.5:3B
+        # Simple mode: fast terminal-style direct response from local Qwen 2.5 without agent/memory delay
         graph_active = _settings_state.get("graph_access_to_chat", False)
         injected_knowledge = []
         prompt_text = request.description
@@ -162,7 +162,6 @@ def create_task(request: TaskRequest):
                     prompt_text = f"{context_prefix}{request.description}"
             except Exception:
                 pass
-
         llm = get_llm()
         result_text = llm.generate_text(prompt_text)
         result_text = result_text.strip() if result_text else "No response generated."

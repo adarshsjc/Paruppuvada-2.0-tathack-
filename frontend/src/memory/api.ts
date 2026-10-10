@@ -27,6 +27,12 @@ const post = <T,>(url: string, body?: unknown): Promise<T> =>
     headers: { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   }).then((r) => j<T>(r));
+const put = <T,>(url: string, body?: unknown): Promise<T> =>
+  fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }).then((r) => j<T>(r));
 const del = <T,>(url: string): Promise<T> => fetch(url, { method: 'DELETE' }).then((r) => j<T>(r));
 
 // ---------------------------------------------------------------- graph
@@ -82,6 +88,43 @@ export const fetchRagDocuments = (projectId?: string | null): Promise<{ document
 
 export const ragIngest = (name: string, content: string, projectId?: string | null): Promise<RagDocument> =>
   post(`${API_BASE}/rag/ingest`, { name, content, project_id: projectId || null });
+
+export interface WorkspaceCsvImport {
+  scanned: number;
+  ingested: RagDocument[];
+  skipped: { file: string; reason: string }[];
+}
+
+/** Mirror the project's CSV files (backend/workspace/*.csv) into memory. */
+export const ingestWorkspaceCsvs = (projectId?: string | null): Promise<WorkspaceCsvImport> =>
+  post(`${API_BASE}/rag/ingest-workspace`, { project_id: projectId || null });
+
+// ---------------------------------------------------------------- conversations
+// Chat history is persisted SERVER-side (survives reloads, browser restarts and
+// origin changes such as localhost vs 127.0.0.1). The UI mirrors it locally.
+export interface ChatMessageLike {
+  role: string;
+  content: string;
+  state?: unknown;
+  timestamp?: string;
+  latencySeconds?: number;
+  mode?: string;
+}
+
+export interface StoredConversation {
+  scope: string;
+  messages: ChatMessageLike[];
+  updated_at: string | null;
+}
+
+export const fetchConversation = (scope: string): Promise<StoredConversation> =>
+  get<StoredConversation>(`${API_BASE}/conversations/${encodeURIComponent(scope)}`);
+
+export const saveConversation = (
+  scope: string,
+  messages: ChatMessageLike[],
+): Promise<{ scope: string; count: number; updated_at: string }> =>
+  put(`${API_BASE}/conversations/${encodeURIComponent(scope)}`, { messages });
 
 export const ragQuery = (
   query: string, projectId?: string | null, channels?: string[], task_id?: string | null,

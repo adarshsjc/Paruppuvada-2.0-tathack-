@@ -4,6 +4,7 @@ compression states, and the optional MiroFish adapter.
 """
 import asyncio
 import json
+import re
 import threading
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
@@ -170,6 +171,36 @@ def validate_selection_api(req: SelectionRequest):
     return library.validate_selection(req.skill_ids, req.include_dependencies)
 
 
+# ---------------------------------------------------------------- conversations
+# Chat history is persisted server-side keyed by an opaque scope (project id or
+# "global"). The UI saves on every change (debounced) and restores on open, so
+# the conversation survives reloads, browser restarts and origin differences.
+
+_SCOPE_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _conversation_scope(scope: str) -> str:
+    s = (scope or "").strip()
+    return s if _SCOPE_RE.match(s) else "global"
+
+
+class ConversationSaveRequest(BaseModel):
+    messages: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+@router.get("/api/v1/conversations/{scope}")
+def get_conversation(scope: str):
+    safe = _conversation_scope(scope)
+    data = get_graph_store().get_conversation(safe)
+    return data or {"scope": safe, "messages": [], "updated_at": None}
+
+
+@router.put("/api/v1/conversations/{scope}")
+def put_conversation(scope: str, req: ConversationSaveRequest):
+    safe = _conversation_scope(scope)
+    return get_graph_store().save_conversation(safe, req.messages or [])
+
+
 # ---------------------------------------------------------------- RAG
 
 @router.get("/api/v1/rag/documents")
@@ -191,6 +222,15 @@ def rag_ingest_api(req: IngestRequest):
     try:
         return rag_ingest.ingest_text(req.name, req.content, req.project_id,
                                       get_graph_store())
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.post("/api/v1/rag/ingest-workspace")
+def rag_ingest_workspace(project_id: Optional[str] = None):
+    """Mirror the project's workspace CSV files into memory (idempotent)."""
+    try:
+        return rag_ingest.ingest_workspace_csvs(get_graph_store(), project_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
 

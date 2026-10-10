@@ -516,7 +516,7 @@ class OpenAILLM(LLMProvider):
 
 def get_llm() -> LLMProvider:
     """Factory: returns the configured LLM provider instance.
-    Defaults to local Ollama (qwen2.5:3b).
+    Defaults to local Ollama (qwen2.5:7b).
     """
     if settings.use_mock_llm:
         return MockLLM()
