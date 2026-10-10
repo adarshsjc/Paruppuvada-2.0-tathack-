@@ -10,7 +10,8 @@ import {
   Bell, 
   Sparkles, 
   Zap, 
-  ChevronRight 
+  ChevronRight,
+  Compass
 } from 'lucide-react';
 import './App.css';
 import type { Project } from './types';
@@ -108,7 +109,12 @@ function App() {
           />
         );
       case 'memory':
-        return <MemoryExplorer projectId={selectedProjectId} />;
+        return (
+          <MemoryExplorer 
+            projectId={selectedProjectId} 
+            onOpenGraph={() => setActiveView('memory_mgmt')} 
+          />
+        );
       case 'history':
         return (
           <ExecutionHistory 
@@ -261,16 +267,16 @@ function App() {
                 </div>
               </button>
 
-              {/* Memory Management */}
+              {/* 3D Skill Graph & Memory */}
               <button 
                 className={`nav-link ${activeView === 'memory_mgmt' ? 'active' : ''}`}
                 onClick={() => setActiveView('memory_mgmt')}
               >
                 <div className="nav-link-left">
-                  <Database className="nav-link-icon" />
-                  <span>Memory Management</span>
+                  <Compass className="nav-link-icon" />
+                  <span>3D Skill Graph</span>
                 </div>
-                <span className="nav-pill-badge pill-amber">NEW</span>
+                <span className="nav-pill-badge pill-amber">LIVE 3D</span>
               </button>
             </nav>
           </div>

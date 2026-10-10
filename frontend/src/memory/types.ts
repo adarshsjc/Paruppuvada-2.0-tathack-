@@ -79,6 +79,8 @@ export interface ExecutionEvent {
 
 export interface GraphOverview {
   roots: GraphNode[];
+  nodes?: GraphNode[];
+  edges?: GraphEdge[];
   type_counts: Partial<Record<NodeType, number>>;
   detail_counts: Partial<Record<NodeType, number>>;
   edge_count: number;

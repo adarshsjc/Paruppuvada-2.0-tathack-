@@ -349,7 +349,7 @@ class GraphStore:
 
     # --- overview & bounded traversal ------------------------------------------
     def overview(self, project_id: Optional[str] = None) -> Dict[str, Any]:
-        """Compressed global overview: roots + real counts. Never returns every detail node."""
+        """Compressed global overview: roots + real counts + initial visible graph."""
         with self._conn() as conn:
             type_counts = {
                 r["node_type"]: r["c"]
@@ -380,8 +380,45 @@ class GraphStore:
                        GROUP BY node_type"""
                 ).fetchall()
             }
+
+            # Also fetch initial visible nodes & edges (active nodes up to limit 300)
+            all_nodes_rows = conn.execute(
+                """SELECT * FROM graph_nodes
+                   WHERE compression_state NOT IN ('ARCHIVED','DELETED')
+                     AND (scope = 'global' OR project_id = ? OR project_id IS NULL)
+                   ORDER BY importance DESC LIMIT 300""",
+                (project_id or "__none__",),
+            ).fetchall()
+            all_nodes = [self._row_to_node(r) for r in all_nodes_rows]
+            node_ids = {n.id for n in all_nodes}
+
+            all_edges = []
+            if node_ids:
+                ph = ",".join("?" * len(node_ids))
+                edge_rows = conn.execute(
+                    f"""SELECT * FROM graph_edges
+                       WHERE source_id IN ({ph}) AND target_id IN ({ph})
+                       LIMIT 500""",
+                    (*node_ids, *node_ids),
+                ).fetchall()
+                for r in edge_rows:
+                    all_edges.append(
+                        GraphEdge(
+                            id=r["id"],
+                            source_id=r["source_id"],
+                            target_id=r["target_id"],
+                            edge_type=EdgeType(r["edge_type"]),
+                            provenance=Provenance(r["provenance"]),
+                            weight=r["weight"],
+                            metadata=json.loads(r["metadata_json"] or "{}"),
+                            created_at=r["created_at"],
+                        )
+                    )
+
         return {
             "roots": [n.model_dump() for n in root_nodes],
+            "nodes": [n.model_dump() for n in all_nodes],
+            "edges": [e.model_dump() for e in all_edges],
             "type_counts": type_counts,
             "detail_counts": detail_counts,
             "edge_count": edge_count,
@@ -401,6 +438,10 @@ class GraphStore:
         frontier = {node_id}
         visited: Dict[str, GraphNode] = {}
         edges: Dict[str, GraphEdge] = {}
+        center = self.get_node(node_id)
+        if center:
+            visited[center.id] = center
+
         with self._conn() as conn:
             for _ in range(depth):
                 if not frontier or len(visited) >= limit:
@@ -437,10 +478,30 @@ class GraphStore:
                             created_at=r["created_at"],
                         )
                 frontier = next_frontier
-        center = self.get_node(node_id)
-        # also include the center node's own direct relationships
-        for e in self.edges_of(node_id):
-            edges.setdefault(e.id, e)
+
+            # also include the center node's own direct relationships
+            if center:
+                for e in self.edges_of(center.id):
+                    edges.setdefault(e.id, e)
+
+            # Ensure all endpoints of collected edges are included in visited so edges are never dangling
+            if edges:
+                missing_ids = set()
+                for e in edges.values():
+                    if e.source_id not in visited:
+                        missing_ids.add(e.source_id)
+                    if e.target_id not in visited:
+                        missing_ids.add(e.target_id)
+                if missing_ids:
+                    ph = ",".join("?" * len(missing_ids))
+                    missing_rows = conn.execute(
+                        f"""SELECT * FROM graph_nodes WHERE id IN ({ph}) AND compression_state != 'DELETED'""",
+                        tuple(missing_ids),
+                    ).fetchall()
+                    for r in missing_rows:
+                        node = self._row_to_node(r)
+                        visited[node.id] = node
+
         return {
             "center": center.model_dump() if center else None,
             "nodes": [n.model_dump() for n in visited.values()],

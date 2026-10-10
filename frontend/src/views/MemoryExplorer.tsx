@@ -3,7 +3,13 @@ import { fetchMemory, addMemory, deleteMemory } from '../api';
 import type { MemoryItem } from '../types';
 import { Database, Search, Loader2, Plus, Trash2, Tag } from 'lucide-react';
 
-export default function MemoryExplorer({ projectId }: { projectId: string }) {
+export default function MemoryExplorer({ 
+  projectId, 
+  onOpenGraph 
+}: { 
+  projectId: string; 
+  onOpenGraph?: () => void; 
+}) {
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('');
@@ -93,6 +99,16 @@ export default function MemoryExplorer({ projectId }: { projectId: string }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {onOpenGraph && (
+            <button 
+              className="btn-join-primary"
+              style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}
+              onClick={onOpenGraph}
+              title="Open 3D Skill Graph and Memory Workspace"
+            >
+              <Database size={16} /> Open 3D Skill Graph
+            </button>
+          )}
           <button 
             className="btn-join-primary"
             onClick={() => setShowAddModal(true)}

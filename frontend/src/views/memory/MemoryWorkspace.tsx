@@ -93,6 +93,12 @@ export default function MemoryWorkspace({ projectId, onUseSkillsInChat }: Props)
     try {
       const overview = await api.fetchOverview(projectId);
       for (const r of overview.roots) nodeMap.current.set(r.id, r);
+      if (overview.nodes) {
+        for (const n of overview.nodes) nodeMap.current.set(n.id, n);
+      }
+      if (overview.edges) {
+        for (const e of overview.edges) edgeMap.current.set(e.id, e);
+      }
       const majors = overview.roots
         .filter((r) => COMPRESSED_OVERVIEW_TYPES.includes(r.node_type) && r.child_count > 0)
         .sort((a, b) => b.importance - a.importance)

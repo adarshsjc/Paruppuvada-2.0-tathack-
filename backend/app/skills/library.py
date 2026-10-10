@@ -68,6 +68,12 @@ CATEGORIES = [
              "Deterministic calculations and general-purpose helpers."),
     Category("cat:knowledge-memory", "Knowledge & Memory",
              "Persistent note-taking and memory retrieval capabilities."),
+    Category("cat:web-research", "Web Research & Intelligence",
+             "Live web searches, citation scraping, and multi-source evidence synthesis."),
+    Category("cat:code-engineering", "Code & File Engineering",
+             "Workspace file inspection, safe code refactoring, and automated test execution."),
+    Category("cat:agent-orchestration", "Multi-Agent Ensemble",
+             "DAG task decomposition, parallel solver ensemble, judge selection, and failure learning."),
 ]
 
 SKILLS: List[SkillManifest] = [
@@ -160,17 +166,155 @@ SKILLS: List[SkillManifest] = [
         instructions="Search memory before answering knowledge questions.",
         importance=0.5,
     ),
+    # --- Web Research Skills ---
+    SkillManifest(
+        id="skill:web-search", name="Web Search", category_id="cat:web-research",
+        description="Executes live web search queries across search engines to retrieve authoritative documentation and facts.",
+        prerequisites=[], allowed_tools=["web_search"],
+        inputs=[{"name": "query", "type": "string"}],
+        outputs=[{"name": "results", "type": "list[dict]"}],
+        verification_rules=["rule:sources_cited"],
+        keywords=["search", "web", "internet", "google", "bing", "lookup", "documentation", "latest"],
+        instructions="Query specific factual search phrases and evaluate domain credibility.",
+        importance=0.8,
+    ),
+    SkillManifest(
+        id="skill:content-extraction", name="Content Extraction", category_id="cat:web-research",
+        description="Extracts and cleans HTML web articles, documentation pages, and raw text feeds into readable markdown.",
+        prerequisites=["skill:web-search"], allowed_tools=["scrape_web_page"],
+        inputs=[{"name": "url", "type": "string"}],
+        outputs=[{"name": "content", "type": "string"}],
+        verification_rules=[],
+        keywords=["scrape", "extract", "url", "article", "page", "content", "html"],
+        instructions="Strip extraneous script tags and ads, returning structured content sections.",
+        importance=0.7,
+    ),
+    SkillManifest(
+        id="skill:research-synthesis", name="Research Synthesis", category_id="cat:web-research",
+        description="Synthesizes findings across multiple web sources, compares competing perspectives, and compiles cited summaries.",
+        prerequisites=["skill:content-extraction"], allowed_tools=["write_markdown"],
+        inputs=[{"name": "sources", "type": "list"}, {"name": "topic", "type": "string"}],
+        outputs=[{"name": "synthesis_report.md", "type": "file"}],
+        verification_rules=["rule:sources_cited", "rule:file_exists"],
+        keywords=["synthesize", "synthesis", "research", "compare", "summary", "citations"],
+        instructions="Cite every claim with its source URL and highlight any conflicting information.",
+        importance=0.85,
+    ),
+    # --- Code & File Engineering Skills ---
+    SkillManifest(
+        id="skill:file-inspection", name="File Inspection", category_id="cat:code-engineering",
+        description="Inspects project files, directories, dependencies, and code structure inside the workspace.",
+        prerequisites=[], allowed_tools=["read_file", "list_directory"],
+        inputs=[{"name": "path", "type": "string"}],
+        outputs=[{"name": "file_data", "type": "string"}],
+        verification_rules=[],
+        keywords=["file", "read", "inspect", "directory", "folder", "list", "code", "tree"],
+        instructions="Check file presence and read key configuration and code segments.",
+        importance=0.75,
+    ),
+    SkillManifest(
+        id="skill:code-refactoring", name="Code Refactoring", category_id="cat:code-engineering",
+        description="Applies precise, targeted code modifications and refactoring with integrity protection.",
+        prerequisites=["skill:file-inspection"], allowed_tools=["write_file", "read_file"],
+        inputs=[{"name": "path", "type": "string"}, {"name": "edits", "type": "string"}],
+        outputs=[{"name": "diff_summary", "type": "string"}],
+        verification_rules=["rule:syntax_valid", "rule:file_exists"],
+        keywords=["edit", "modify", "code", "refactor", "patch", "write", "fix"],
+        instructions="Ensure backward compatibility, preserve comments, and avoid introducing syntax errors.",
+        importance=0.85,
+    ),
+    SkillManifest(
+        id="skill:automated-testing", name="Automated Testing", category_id="cat:code-engineering",
+        description="Runs automated test suites to verify that bug fixes and features pass all assertions.",
+        prerequisites=["skill:code-refactoring"], allowed_tools=["run_tests"],
+        inputs=[{"name": "test_path", "type": "string"}],
+        outputs=[{"name": "test_results", "type": "object"}],
+        verification_rules=["rule:tests_pass"],
+        keywords=["test", "pytest", "tests", "unit test", "verify", "assertions", "pass"],
+        instructions="Execute pytest or npm test and parse failing assertion tracebacks.",
+        importance=0.9,
+    ),
+    # --- Agent Orchestration & Self-Reflection Skills ---
+    SkillManifest(
+        id="skill:task-decomposition", name="Task Decomposition", category_id="cat:agent-orchestration",
+        description="Breaks ambiguous, multi-step requests into an optimal DAG plan with clear inputs and outputs.",
+        prerequisites=[], allowed_tools=["decompose_task"],
+        inputs=[{"name": "goal", "type": "string"}],
+        outputs=[{"name": "plan_dag", "type": "object"}],
+        verification_rules=[],
+        keywords=["decompose", "plan", "dag", "steps", "tasks", "subtasks", "breakdown"],
+        instructions="Order tasks topologically with strict dependency links and verifiable acceptance criteria.",
+        importance=0.8,
+    ),
+    SkillManifest(
+        id="skill:parallel-ensemble", name="Parallel Ensemble", category_id="cat:agent-orchestration",
+        description="Coordinates multiple specialized solution agents (Direct Solver, Critical Thinker, Synthesizer) concurrently.",
+        prerequisites=["skill:task-decomposition"], allowed_tools=["ensemble_solve"],
+        inputs=[{"name": "prompt", "type": "string"}, {"name": "roles", "type": "list[string]"}],
+        outputs=[{"name": "candidates", "type": "list[dict]"}],
+        verification_rules=[],
+        keywords=["parallel", "ensemble", "agents", "candidates", "multi-agent", "concurrent"],
+        instructions="Run diverse agent personas to explore different angles and catch edge cases.",
+        importance=0.85,
+    ),
+    SkillManifest(
+        id="skill:judge-evaluation", name="Judge Evaluation", category_id="cat:agent-orchestration",
+        description="Critically grades candidate agent outputs against acceptance criteria and selects the best answer.",
+        prerequisites=["skill:parallel-ensemble"], allowed_tools=["judge_selection"],
+        inputs=[{"name": "candidates", "type": "list"}],
+        outputs=[{"name": "selected_solution", "type": "string"}],
+        verification_rules=["rule:judge_consensus"],
+        keywords=["judge", "evaluate", "select", "grade", "score", "rubric", "verdict"],
+        instructions="Score completeness, soundness, and factual accuracy. Provide transparent rationale.",
+        importance=0.9,
+    ),
+    SkillManifest(
+        id="skill:failure-reflection", name="Failure Reflection", category_id="cat:agent-orchestration",
+        description="Diagnoses execution tool errors, identifies root cause signatures, and stores validated recovery paths.",
+        prerequisites=["skill:judge-evaluation"], allowed_tools=["record_failure"],
+        inputs=[{"name": "error_log", "type": "string"}],
+        outputs=[{"name": "recovery_id", "type": "string"}],
+        verification_rules=[],
+        keywords=["failure", "error", "reflect", "recover", "diagnosis", "learn", "fix"],
+        instructions="Extract minimal error signatures and map them to actionable retry strategies.",
+        importance=0.85,
+    ),
 ]
 
 WORKFLOWS = [
     {
         "id": "workflow:sales-report",
         "name": "Sales Report Workflow",
+        "category_id": "cat:data-reporting",
         "description": "Validate a sales CSV, compute revenue totals by product, write "
                        "report.json + report.md, and verify both artifacts independently.",
         "skill_ids": ["skill:csv-validation", "skill:revenue-aggregation",
                       "skill:report-writing", "skill:report-verification"],
         "importance": 0.9,
+    },
+    {
+        "id": "workflow:web-research",
+        "name": "Autonomous Web Research",
+        "category_id": "cat:web-research",
+        "description": "Execute live search, extract article content, synthesize evidence, and verify source citations.",
+        "skill_ids": ["skill:web-search", "skill:content-extraction", "skill:research-synthesis"],
+        "importance": 0.88,
+    },
+    {
+        "id": "workflow:code-evolution",
+        "name": "Code Evolution & Test Loop",
+        "category_id": "cat:code-engineering",
+        "description": "Inspect project workspace, refactor implementation, and execute automated tests to verify passes.",
+        "skill_ids": ["skill:file-inspection", "skill:code-refactoring", "skill:automated-testing"],
+        "importance": 0.92,
+    },
+    {
+        "id": "workflow:multi-agent-solve",
+        "name": "Ensemble Problem Solving",
+        "category_id": "cat:agent-orchestration",
+        "description": "Decompose high-level goal, solve concurrently via parallel agents, judge best candidate, and learn from mistakes.",
+        "skill_ids": ["skill:task-decomposition", "skill:parallel-ensemble", "skill:judge-evaluation", "skill:failure-reflection"],
+        "importance": 0.95,
     },
 ]
 
@@ -213,6 +357,14 @@ VERIFICATION_RULES = [
      "description": "Reported aggregates equal a fresh recomputation from the source data."},
     {"id": "rule:report_consistent", "name": "Report internally consistent",
      "description": "Validation report flags match the actual file contents."},
+    {"id": "rule:sources_cited", "name": "Sources cited",
+     "description": "Every factual statement references an accessible source link."},
+    {"id": "rule:syntax_valid", "name": "Syntax valid",
+     "description": "Generated code compiles and has valid syntax."},
+    {"id": "rule:tests_pass", "name": "Tests pass",
+     "description": "All automated unit tests execute with zero failures."},
+    {"id": "rule:judge_consensus", "name": "Judge consensus",
+     "description": "Winning candidate is verified by multi-criteria rubric scoring."},
 ]
 
 _TOOL_DESCRIPTIONS = {
@@ -226,6 +378,16 @@ _TOOL_DESCRIPTIONS = {
     "write_markdown": "Write a Markdown file inside the workspace sandbox",
     "verify_file_exists": "Check a file exists in the workspace",
     "read_json": "Parse a JSON file from the workspace",
+    "web_search": "Query live search sources for relevant documentation and facts",
+    "scrape_web_page": "Extract clean text content and remove markup from a target URL",
+    "read_file": "Read source code or text files within the workspace sandbox",
+    "write_file": "Write source code or text files within the workspace sandbox",
+    "list_directory": "List contents and hierarchy of the workspace sandbox directory",
+    "run_tests": "Run automated unit test checks inside the sandboxed environment",
+    "decompose_task": "Deconstruct high-level user requests into DAG execution steps",
+    "ensemble_solve": "Execute parallel candidate solvers across independent agent perspectives",
+    "judge_selection": "Critically evaluate candidate solutions and pick the optimal output",
+    "record_failure": "Document execution failure modes and index recovery paths",
 }
 
 SKILL_BY_ID: Dict[str, SkillManifest] = {s.id: s for s in SKILLS}
@@ -377,13 +539,14 @@ def seed_graph(store: GraphStore) -> Dict[str, int]:
             created_edges += 1
 
     for wf in WORKFLOWS:
+        cat_id = wf.get("category_id", "cat:data-reporting")
         upsert(GraphNode(
             id=wf["id"], node_type=NodeType.WORKFLOW, label=wf["name"],
-            description=wf["description"], parent_id="cat:data-reporting",
+            description=wf["description"], parent_id=cat_id,
             compression_state=CompressionState.SUMMARY_STORED, importance=wf["importance"],
             metadata={"skills": wf["skill_ids"]},
         ))
-        store.upsert_edge("cat:data-reporting", wf["id"], EdgeType.CONTAINS, Provenance.EXPLICIT)
+        store.upsert_edge(cat_id, wf["id"], EdgeType.CONTAINS, Provenance.EXPLICIT)
         for sid in wf["skill_ids"]:
             store.upsert_edge(wf["id"], sid, EdgeType.CONTAINS, Provenance.EXPLICIT)
             created_edges += 1
